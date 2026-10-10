@@ -500,7 +500,7 @@ Hệ thống áp dụng mô hình quản lý kho **Cách A (Trừ kho ngay lúc 
 3. **Ký chữ ký số hợp lệ:** API mock tự động đóng gói payload chuẩn PayOS, tính toán mã băm HMAC-SHA256 bằng `PAYOS_CHECKSUM_KEY`, sau đó POST vào chính handler `/api/payments/webhook`, đảm bảo quy trình kiểm tra bảo mật chạy đầy đủ 100% như thật.
 
 ### 8.7. Phòng chống Spam Giữ Kho (Denial of Inventory) & Cấu hình Proxy
-* **Chống chiếm dụng kho:** Giới hạn mỗi tài khoản người dùng hoặc mỗi địa chỉ IP chỉ được phép duy trì tối đa **02 đơn hàng ở trạng thái `PENDING_PAYMENT`** cùng một thời điểm. Nếu vượt quá, hệ thống từ chối tạo khóa kho mới.
+* **Chống chiếm dụng kho:** Giới hạn mỗi tài khoản người dùng chỉ được phép duy trì tối đa **02 đơn hàng ở trạng thái `PENDING_PAYMENT`** cùng một thời điểm (kết hợp câu lệnh khóa dòng `FOR UPDATE` trong database transaction để chặn triệt để race condition khi đặt hàng đồng thời). Đồng thời, hệ thống áp dụng cơ chế **Rate Limit theo địa chỉ IP (tối đa 10 lượt checkout/phút)** để ngăn ngừa tấn công brute-force và spam request.
 * **Cấu hình Trust Proxy:** Khi triển khai qua Ngrok hoặc Reverse Proxy, Backend cấu hình `app.set('trust proxy', 1)` trong Express để trích xuất chính xác địa chỉ IP thực của client thông qua header `X-Forwarded-For`, ngăn ngừa việc toàn bộ request bị gán chung IP của proxy.
 
 ### 8.8. Quy tắc Vòng đời Mã Giảm Giá (Voucher Lifecycle & Concurrency)

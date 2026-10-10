@@ -348,14 +348,42 @@ export class AdminController {
         return;
       }
 
+      let parsedMinOrder = 0;
+      if (minOrderValue !== undefined && minOrderValue !== null && minOrderValue !== "") {
+        parsedMinOrder = Number(minOrderValue);
+        if (!Number.isFinite(parsedMinOrder) || parsedMinOrder < 0) {
+          res.status(400).json({ success: false, message: "Giá trị đơn hàng tối thiểu (minOrderValue) phải là số không âm." });
+          return;
+        }
+      }
+
+      let parsedUsageLimit = 100;
+      if (usageLimit !== undefined && usageLimit !== null && usageLimit !== "") {
+        parsedUsageLimit = Number(usageLimit);
+        if (!Number.isInteger(parsedUsageLimit) || parsedUsageLimit <= 0) {
+          res.status(400).json({ success: false, message: "Số lượt sử dụng tối đa (usageLimit) phải là số nguyên dương." });
+          return;
+        }
+      }
+
+      if (!expiresAt) {
+        res.status(400).json({ success: false, message: "Thời hạn voucher (expiresAt) là bắt buộc." });
+        return;
+      }
+      const expiryDate = new Date(expiresAt);
+      if (isNaN(expiryDate.getTime())) {
+        res.status(400).json({ success: false, message: "Thời hạn voucher (expiresAt) không đúng định dạng ngày tháng." });
+        return;
+      }
+
       const voucher = await prisma.voucher.create({
         data: {
           code: code.toUpperCase(),
           discountType,
           discountValue: val,
-          minOrderValue: minOrderValue ? Math.max(0, Number(minOrderValue)) : 0,
-          usageLimit: usageLimit ? Math.max(1, parseInt(usageLimit, 10)) : 100,
-          expiresAt: new Date(expiresAt),
+          minOrderValue: parsedMinOrder,
+          usageLimit: parsedUsageLimit,
+          expiresAt: expiryDate,
         },
       });
 
