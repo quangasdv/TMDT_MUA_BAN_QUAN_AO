@@ -243,6 +243,7 @@ model Product {
   sizeCharts  SizeChart[]
   isActive    Boolean          @default(true)
   createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
 }
 
 // 4. Bảng thông số kích thước chuẩn (Phục vụ Smart Fit Advisor)
@@ -304,6 +305,7 @@ model Cart {
   user      User?      @relation(fields: [userId], references: [id])
   sessionId String?    @unique
   items     CartItem[]
+  createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
 
@@ -374,6 +376,7 @@ model PaymentTransaction {
   status         String
   webhookPayload Json?
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 }
 
 // 14. Mã giảm giá
