@@ -195,6 +195,27 @@ export class AdminController {
     try {
       const { name, slug, description, basePrice, categoryId, variants, sizeCharts } = req.body;
 
+      const base = Number(basePrice);
+      if (!Number.isFinite(base) || base < 0) {
+        res.status(400).json({ success: false, message: "Giá gốc (basePrice) phải là số không âm." });
+        return;
+      }
+
+      if (variants && Array.isArray(variants)) {
+        for (const v of variants) {
+          const adj = Number(v.priceAdjustment || 0);
+          const stock = Number(v.stockQuantity || 0);
+          if (!Number.isFinite(adj) || base + adj < 0) {
+            res.status(400).json({ success: false, message: `Giá bán của biến thể SKU "${v.sku || ""}" không được âm.` });
+            return;
+          }
+          if (!Number.isInteger(stock) || stock < 0) {
+            res.status(400).json({ success: false, message: `Số lượng tồn kho của biến thể SKU "${v.sku || ""}" phải là số nguyên không âm.` });
+            return;
+          }
+        }
+      }
+
       const product = await prisma.product.create({
         data: {
           name,
@@ -241,6 +262,14 @@ export class AdminController {
     try {
       const { id } = req.params;
       const { name, description, basePrice, categoryId, isActive } = req.body;
+
+      if (basePrice !== undefined) {
+        const base = Number(basePrice);
+        if (!Number.isFinite(base) || base < 0) {
+          res.status(400).json({ success: false, message: "Giá gốc sản phẩm không được là số âm." });
+          return;
+        }
+      }
 
       const product = await prisma.product.update({
         where: { id },
@@ -298,13 +327,34 @@ export class AdminController {
     try {
       const { code, discountType, discountValue, minOrderValue, usageLimit, expiresAt } = req.body;
 
+      if (!code || typeof code !== "string") {
+        res.status(400).json({ success: false, message: "Mã voucher (code) là bắt buộc." });
+        return;
+      }
+
+      if (!["PERCENT", "FIXED"].includes(discountType)) {
+        res.status(400).json({ success: false, message: "Loại giảm giá chỉ chấp nhận PERCENT hoặc FIXED." });
+        return;
+      }
+
+      const val = Number(discountValue);
+      if (!Number.isFinite(val) || val <= 0) {
+        res.status(400).json({ success: false, message: "Mức giảm giá (discountValue) phải là số dương lớn hơn 0." });
+        return;
+      }
+
+      if (discountType === "PERCENT" && val > 100) {
+        res.status(400).json({ success: false, message: "Giảm giá theo phần trăm không được vượt quá 100%." });
+        return;
+      }
+
       const voucher = await prisma.voucher.create({
         data: {
           code: code.toUpperCase(),
           discountType,
-          discountValue,
-          minOrderValue: minOrderValue || 0,
-          usageLimit: usageLimit || 100,
+          discountValue: val,
+          minOrderValue: minOrderValue ? Math.max(0, Number(minOrderValue)) : 0,
+          usageLimit: usageLimit ? Math.max(1, parseInt(usageLimit, 10)) : 100,
           expiresAt: new Date(expiresAt),
         },
       });

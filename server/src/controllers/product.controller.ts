@@ -91,10 +91,10 @@ export class ProductController {
         },
       });
 
-      if (!product) {
+      if (!product || !product.isActive) {
         res.status(404).json({
           success: false,
-          message: "Không tìm thấy sản phẩm yêu cầu.",
+          message: "Không tìm thấy sản phẩm yêu cầu hoặc sản phẩm đã ngừng kinh doanh.",
         });
         return;
       }

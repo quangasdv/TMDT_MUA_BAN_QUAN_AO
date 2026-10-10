@@ -66,6 +66,12 @@ export class CheckoutController {
         return;
       }
 
+      // Chặn đặt hàng các sản phẩm đã bị ẩn (isActive = false)
+      if (variants.some((v) => !v.product.isActive)) {
+        res.status(400).json({ success: false, message: "Một số sản phẩm không còn mở bán hoặc đã ngừng kinh doanh." });
+        return;
+      }
+
       let totalAmount = 0;
       const orderItemsData: Array<{ variantId: string; quantity: number; unitPrice: number }> = [];
 
@@ -105,6 +111,22 @@ export class CheckoutController {
 
       // Thực thi Transaction nguyên tử
       const createdOrder = await prisma.$transaction(async (tx) => {
+        // Khóa dòng User để ngăn chặn Race Condition khi gửi đồng thời nhiều request checkout
+        await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+
+        // Kiểm tra lại pendingCount trong transaction đã khóa dòng
+        const currentPendingCount = await tx.order.count({
+          where: { userId, status: "PENDING_PAYMENT" },
+        });
+
+        if (currentPendingCount >= 2) {
+          const err: any = new Error(
+            "Bạn đang có 2 đơn hàng chờ thanh toán. Vui lòng thanh toán hoặc chờ hết hạn trước khi tạo đơn mới."
+          );
+          err.statusCode = 429;
+          throw err;
+        }
+
         // 1. Tạo Order
         const order = await tx.order.create({
           data: {
@@ -164,6 +186,10 @@ export class CheckoutController {
         },
       });
     } catch (error: any) {
+      if (error.statusCode === 429) {
+        res.status(429).json({ success: false, message: error.message });
+        return;
+      }
       if (error.message?.includes("hết hàng")) {
         res.status(409).json({ success: false, message: error.message });
         return;

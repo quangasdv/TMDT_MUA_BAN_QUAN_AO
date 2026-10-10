@@ -68,8 +68,8 @@ export class PaymentService {
     }
 
     // Kiểm tra mã kết quả từ PayOS (00 là thành công)
-    if (payload.code && payload.code !== "00") {
-      return { success: false, message: `Webhook giao dịch không thành công từ cổng thanh toán (Mã: ${payload.code}).` };
+    if (payload.code !== "00") {
+      throw new Error(`Webhook không xác nhận giao dịch thành công (Mã kết quả: ${payload.code ?? "KHÔNG_XÁC_ĐỊNH"}).`);
     }
 
     const { orderCode, amount, reference } = payload.data;
@@ -101,28 +101,31 @@ export class PaymentService {
 
     // Trường hợp đơn đã bị hủy (hết hạn 10p) mà khách vẫn chuyển tiền thành công
     if (order.status === "CANCELLED") {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: "PAYMENT_EXPIRED_PENDING_REFUND",
-          paymentStatus: "PAID_EXPIRED",
-        },
-      });
+      await prisma.$transaction(async (tx) => {
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: "PAYMENT_EXPIRED_PENDING_REFUND",
+            paymentStatus: "PAID_EXPIRED",
+          },
+        });
 
-      await prisma.paymentTransaction.upsert({
-        where: { orderId: order.id },
-        create: {
-          orderId: order.id,
-          amount: order.finalAmount,
-          provider: "PAYOS",
-          status: "EXPIRED_REFUND_PENDING",
-          transactionRef: reference || null,
-          webhookPayload: payload as any,
-        },
-        update: {
-          status: "EXPIRED_REFUND_PENDING",
-          webhookPayload: payload as any,
-        },
+        await tx.paymentTransaction.upsert({
+          where: { orderId: order.id },
+          create: {
+            orderId: order.id,
+            amount: order.finalAmount,
+            provider: "PAYOS",
+            status: "EXPIRED_REFUND_PENDING",
+            transactionRef: reference || null,
+            webhookPayload: payload as any,
+          },
+          update: {
+            status: "EXPIRED_REFUND_PENDING",
+            transactionRef: reference || null,
+            webhookPayload: payload as any,
+          },
+        });
       });
 
       return {
@@ -132,6 +135,7 @@ export class PaymentService {
     }
 
     // CẬP NHẬT CHÍNH THỨC SANG PAID
+    let isLateRefund = false;
     await prisma.$transaction(async (tx) => {
       // Dùng điều kiện nguyên tử WHERE status = 'PENDING_PAYMENT'
       const updatedOrders = await tx.$executeRaw`
@@ -141,6 +145,47 @@ export class PaymentService {
       `;
 
       if (updatedOrders === 0) {
+        // Kiểm tra lại trạng thái hiện tại trong DB để xử lý Idempotent hoặc Race Condition với Cron/Admin
+        const currentOrder = await tx.order.findUnique({ where: { id: order.id } });
+        if (
+          currentOrder?.status === "PAID" ||
+          currentOrder?.paymentStatus === "PAID" ||
+          currentOrder?.status === "PAYMENT_EXPIRED_PENDING_REFUND"
+        ) {
+          // Idempotent: Webhook đã được ghi nhận trước đó
+          return;
+        }
+
+        if (currentOrder?.status === "CANCELLED") {
+          // Race condition: Đơn vừa bị Cron/Admin hủy ngay trước lệnh UPDATE -> Chuyển sang chờ hoàn tiền
+          isLateRefund = true;
+          await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: "PAYMENT_EXPIRED_PENDING_REFUND",
+              paymentStatus: "PAID_EXPIRED",
+            },
+          });
+
+          await tx.paymentTransaction.upsert({
+            where: { orderId: order.id },
+            create: {
+              orderId: order.id,
+              amount: order.finalAmount,
+              provider: "PAYOS",
+              status: "EXPIRED_REFUND_PENDING",
+              transactionRef: reference || null,
+              webhookPayload: payload as any,
+            },
+            update: {
+              status: "EXPIRED_REFUND_PENDING",
+              transactionRef: reference || null,
+              webhookPayload: payload as any,
+            },
+          });
+          return;
+        }
+
         throw new Error("Trạng thái đơn hàng không ở chế độ PENDING_PAYMENT, không thể chuyển sang PAID.");
       }
 
@@ -184,6 +229,13 @@ export class PaymentService {
         },
       });
     });
+
+    if (isLateRefund) {
+      return {
+        success: true,
+        message: "Đơn hàng quá hạn đã hủy, ghi nhận tiền vào trạng thái chờ hoàn tiền.",
+      };
+    }
 
     return { success: true, message: `Thanh toán thành công đơn hàng #${orderCode}.` };
   }
