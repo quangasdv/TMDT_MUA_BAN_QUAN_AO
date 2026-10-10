@@ -2,12 +2,6 @@
 
 Hệ thống thương mại điện tử thời trang B2C theo kiến trúc Headless Commerce, tích hợp phòng phối đồ trực quan (Interactive Outfit Builder), thuật toán gợi ý kích cỡ (Smart Fit Advisor) và cơ chế kiểm soát tranh chấp kho hàng (Atomic Conditional Inventory Locking).
 
-Đồ án môn học: **Thương Mại Điện Tử**  
-Khoa Công Nghệ Thông Tin - Bộ môn Công Nghệ Phần Mềm  
-Trường Đại học Tài nguyên và Môi trường TP.HCM (HCMUNRE)  
-Lớp: `12_ĐH_CNPM1,2` | Năm học: 2026 - 2027  
-Giảng viên hướng dẫn: ThS. Hoàng Cư Hoằng (Email: hchoang@hcmunre.edu.vn)
-
 ---
 
 ## 1. Thành viên nhóm và Phân công trách nhiệm
