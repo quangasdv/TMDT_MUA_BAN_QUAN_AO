@@ -1,0 +1,214 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  STAFF
+}
+
+enum LockStatus {
+  LOCKED      // Đã trừ kho và đang khóa giữ trong 10 phút
+  COMMITTED   // Đã thanh toán, chốt trừ kho vĩnh viễn
+  EXPIRED     // Hết 10 phút chưa trả tiền, đã hoàn trả lại kho
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT                // Chờ thanh toán (đã khóa hàng 10 phút)
+  PAID                           // Đã thanh toán thành công
+  PROCESSING                     // Đang đóng gói
+  SHIPPING                       // Đang giao hàng
+  DELIVERED                      // Đã giao hàng thành công
+  CANCELLED                      // Đã hủy (do quá hạn 10 phút)
+  PAYMENT_EXPIRED_PENDING_REFUND // Thanh toán muộn khi kho đã hết, chờ hoàn tiền
+}
+
+// 1. Người dùng
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  role         Role      @default(CUSTOMER)
+  createdAt    DateTime  @default(now())
+  orders       Order[]
+  cart         Cart?
+}
+
+// 2. Danh mục sản phẩm (Phân cấp cha - con)
+model Category {
+  id       String     @id @default(uuid())
+  name     String
+  slug     String     @unique
+  parentId String?
+  parent   Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children Category[] @relation("SubCategories")
+  products Product[]
+}
+
+// 3. Sản phẩm chung
+model Product {
+  id          String           @id @default(uuid())
+  name        String
+  slug        String           @unique
+  description String           @db.Text
+  basePrice   Decimal          @db.Decimal(12, 2)
+  categoryId  String
+  category    Category         @relation(fields: [categoryId], references: [id])
+  variants    ProductVariant[]
+  sizeCharts  SizeChart[]
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+}
+
+// 4. Bảng thông số kích thước chuẩn (Phục vụ Smart Fit Advisor)
+model SizeChart {
+  id          String  @id @default(uuid())
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  size        String  // S, M, L, XL
+  minHeightCm Int
+  maxHeightCm Int
+  minWeightKg Int
+  maxWeightKg Int
+  chestCm     Int?
+  waistCm     Int?
+}
+
+// 5. Biến thể sản phẩm (SKU chi tiết: Size, Màu, Tồn kho)
+model ProductVariant {
+  id              String          @id @default(uuid())
+  productId       String
+  product         Product         @relation(fields: [productId], references: [id])
+  sku             String          @unique
+  color           String
+  size            String
+  priceAdjustment Decimal         @default(0) @db.Decimal(12, 2)
+  stockQuantity   Int             // Tồn kho thực tế (trừ ngay khi lock, cộng lại nếu expired)
+  imageUrl        String
+  outfitItems     OutfitItem[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  inventoryLocks  InventoryLock[]
+}
+
+// 6. Bộ phối đồ Outfit (Lookbook)
+model Outfit {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?
+  bannerUrl    String?
+  discountRate Float        @default(0.15)
+  items        OutfitItem[]
+  isActive     Boolean      @default(true)
+}
+
+// 7. Món đồ cấu thành Outfit (Top, Bottom, Shoes, Outerwear)
+model OutfitItem {
+  id        String         @id @default(uuid())
+  outfitId  String
+  outfit    Outfit         @relation(fields: [outfitId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  slotType  String         // TOP, BOTTOM, OUTERWEAR, SHOES
+}
+
+// 8. Giỏ hàng (Hỗ trợ khách vãng lai qua sessionId, gộp vào user khi đăng nhập)
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id])
+  sessionId String?    @unique
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+// 9. Chi tiết giỏ hàng
+model CartItem {
+  id        String         @id @default(uuid())
+  cartId    String
+  cart      Cart           @relation(fields: [cartId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int            @default(1)
+}
+
+// 10. Khóa kho tạm thời (Theo dõi thời hạn và hoàn kho)
+model InventoryLock {
+  id        String         @id @default(uuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id])
+  quantity  Int
+  lockedAt  DateTime       @default(now())
+  expiresAt DateTime
+  status    LockStatus     @default(LOCKED)
+}
+
+// 11. Đơn hàng
+model Order {
+  id              String               @id @default(uuid())
+  orderCode       Int                  @unique
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id])
+  recipientName   String
+  recipientPhone  String
+  shippingAddress String
+  voucherId       String?
+  voucher         Voucher?             @relation(fields: [voucherId], references: [id])
+  totalAmount     Decimal              @db.Decimal(12, 2)
+  discountAmount  Decimal              @default(0) @db.Decimal(12, 2)
+  finalAmount     Decimal              @db.Decimal(12, 2)
+  status          OrderStatus          @default(PENDING_PAYMENT)
+  paymentStatus   String               @default("UNPAID")
+  createdAt       DateTime             @default(now())
+  items           OrderItem[]
+  locks           InventoryLock[]
+  payment         PaymentTransaction?
+}
+
+// 12. Chi tiết đơn hàng
+model OrderItem {
+  id        String         @id @default(uuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  unitPrice Decimal        @db.Decimal(12, 2)
+}
+
+// 13. Giao dịch thanh toán & Webhook Log
+model PaymentTransaction {
+  id             String   @id @default(uuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id])
+  transactionRef String?
+  amount         Decimal  @db.Decimal(12, 2)
+  provider       String   @default("PAYOS")
+  status         String
+  webhookPayload Json?
+  createdAt      DateTime @default(now())
+}
+
+// 14. Mã giảm giá
+model Voucher {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  discountType  String    // PERCENT / FIXED
+  discountValue Decimal   @db.Decimal(12, 2)
+  minOrderValue Decimal   @default(0) @db.Decimal(12, 2)
+  usageLimit    Int       @default(100)
+  usedCount     Int       @default(0)
+  expiresAt     DateTime
+  isActive      Boolean   @default(true)
+  orders        Order[]
+}

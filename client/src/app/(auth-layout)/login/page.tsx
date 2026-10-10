@@ -7,16 +7,24 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import AuthLayout from "../layout";
+import { baseAPI } from "@/api/axios.api";
 
 const loginSchema = z.object({
-  email: z.email("Email không hợp lệ"),
-  password: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
+  const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -26,8 +34,37 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    // TODO: Implement login logic
-    console.log(data);
+    try {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+
+      const guestSessionId =
+        typeof window !== "undefined"
+          ? localStorage.getItem("trendyfit_session_id")
+          : null;
+
+      const res = await baseAPI.post("/auth/login", {
+        email: data.email,
+        password: data.password,
+        guestSessionId,
+      });
+
+      if (res.data?.success) {
+        const { user, accessToken } = res.data.data;
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("user", JSON.stringify(user));
+        setSuccessMessage(`Đăng nhập thành công! Xin chào ${user.fullName}`);
+
+        setTimeout(() => {
+          router.push("/");
+        }, 1000);
+      }
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin kết nối.";
+      setErrorMessage(msg);
+    }
   };
 
   return (
@@ -35,10 +72,10 @@ export default function Login() {
       <div className="auth-frame">
         <section className="auth-form-panel" aria-labelledby="login-title">
           <header className="auth-topbar">
-            <a className="auth-brand" href="/" aria-label="Mở trang chủ Nếp">
+            <Link className="auth-brand" href="/" aria-label="Mở trang chủ Nếp">
               <span className="auth-brand-mark" aria-hidden="true" />
               <span className="auth-brand-name">Trendyfit</span>
-            </a>
+            </Link>
           </header>
 
           <div className="auth-form-content">
@@ -53,6 +90,34 @@ export default function Login() {
             </p>
 
             <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
+              {errorMessage && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    backgroundColor: "#fef2f2",
+                    color: "#dc2626",
+                    border: "1px solid #fecaca",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  {errorMessage}
+                </div>
+              )}
+              {successMessage && (
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    backgroundColor: "#f0fdf4",
+                    color: "#16a34a",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                  }}
+                >
+                  {successMessage}
+                </div>
+              )}
               <div className="auth-field">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -86,7 +151,7 @@ export default function Login() {
               </div>
 
               <p className="auth-signin">
-                Chưa có tài khoản? <a href="/register">Tạo tài khoản</a>
+                Chưa có tài khoản? <Link href="/register">Tạo tài khoản</Link>
               </p>
 
               <Button

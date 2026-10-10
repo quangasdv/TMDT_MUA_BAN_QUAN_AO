@@ -1,9 +1,8 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div>
-      <h1>This is a homepage</h1>
+    <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
+      <h1>TrendyFit - Nền tảng Thương mại Điện tử Thời trang Thông minh</h1>
+      <p>Trang chủ đang được thiết kế. Vui lòng truy cập trang đăng nhập hoặc xem tài liệu API.</p>
     </div>
   );
 }
