@@ -1,0 +1,241 @@
+{
+  "info": {
+    "name": "TRENDYFIT E-Commerce API Collection",
+    "description": "Bộ sưu tập API hoàn chỉnh cho dự án TMĐT TrendyFit phục vụ kiểm thử và kết nối Frontend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Đăng ký (Register)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@gmail.com\",\n  \"password\": \"Customer@123456\",\n  \"fullName\": \"Nguyễn Văn Khách Hàng\",\n  \"phone\": \"0988888888\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "Đăng nhập (Login)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer@gmail.com\",\n  \"password\": \"Customer@123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Thông tin cá nhân (Get Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Storefront Products & Categories",
+      "item": [
+        {
+          "name": "Danh mục sản phẩm (Categories)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/categories", "host": ["{{baseUrl}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Danh sách sản phẩm (Filter & Pagination)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?page=1&limit=12&q=&minPrice=0&maxPrice=1000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" },
+                { "key": "q", "value": "" },
+                { "key": "minPrice", "value": "0" },
+                { "key": "maxPrice", "value": "1000000" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Chi tiết sản phẩm theo Slug",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/ao-thun-cotton-oversize", "host": ["{{baseUrl}}"], "path": ["products", "ao-thun-cotton-oversize"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Cart",
+      "item": [
+        {
+          "name": "Lấy giỏ hàng (Get Cart)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-session-id", "value": "guest_session_123" }
+            ],
+            "url": { "raw": "{{baseUrl}}/cart", "host": ["{{baseUrl}}"], "path": ["cart"] }
+          }
+        },
+        {
+          "name": "Thêm vào giỏ (Add to Cart)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "x-session-id", "value": "guest_session_123" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"variantId\": \"INSERT_VARIANT_ID_HERE\",\n  \"quantity\": 1\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cart/items", "host": ["{{baseUrl}}"], "path": ["cart", "items"] }
+          }
+        },
+        {
+          "name": "Cập nhật số lượng (Update Quantity)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 2\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cart/items/INSERT_ITEM_ID_HERE", "host": ["{{baseUrl}}"], "path": ["cart", "items", "INSERT_ITEM_ID_HERE"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Checkout & Orders",
+      "item": [
+        {
+          "name": "Tạo đơn & Khóa kho 10 phút (Lock & Checkout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientName\": \"Nguyễn Văn A\",\n  \"recipientPhone\": \"0987654321\",\n  \"shippingAddress\": \"123 Đường Nguyễn Huệ, Quận 1, TP.HCM\",\n  \"voucherCode\": \"WELCOME10\",\n  \"items\": [\n    {\n      \"variantId\": \"INSERT_VARIANT_ID_HERE\",\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/checkout/lock", "host": ["{{baseUrl}}"], "path": ["checkout", "lock"] }
+          }
+        },
+        {
+          "name": "Lấy danh sách đơn hàng (User Orders)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Payment",
+      "item": [
+        {
+          "name": "Tạo mã VietQR thanh toán",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderCode\": 123456\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/create-qr", "host": ["{{baseUrl}}"], "path": ["payments", "create-qr"] }
+          }
+        },
+        {
+          "name": "Giả lập Thanh toán Mock (Demo Simulator)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderCode\": 123456\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/payments/mock-simulate", "host": ["{{baseUrl}}"], "path": ["payments", "mock-simulate"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Smart Fit Advisor",
+      "item": [
+        {
+          "name": "Gợi ý Size Thông minh (Fit Recommendation)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"INSERT_PRODUCT_ID_HERE\",\n  \"height\": 172,\n  \"weight\": 68,\n  \"chest\": 94,\n  \"waist\": 80,\n  \"hips\": 96,\n  \"fitPreference\": \"REGULAR\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/fit-advisor/recommend", "host": ["{{baseUrl}}"], "path": ["fit-advisor", "recommend"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Outfit Builder Canvas 2D",
+      "item": [
+        {
+          "name": "Danh sách các Set đồ phối sẵn (Outfits)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/outfits", "host": ["{{baseUrl}}"], "path": ["outfits"] }
+          }
+        },
+        {
+          "name": "Danh sách sản phẩm theo Slot 2D Canvas (Slots)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/outfits/slots", "host": ["{{baseUrl}}"], "path": ["outfits", "slots"] }
+          }
+        }
+      ]
+    }
+  ]
+}
