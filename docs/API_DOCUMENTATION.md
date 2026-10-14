@@ -472,3 +472,113 @@
 * `DELETE /api/admin/products/:id` (Role: `ADMIN`): Ẩn sản phẩm (`isActive = false`).
 * `GET /api/admin/vouchers` (Role: `ADMIN`): Danh sách mã giảm giá.
 * `POST /api/admin/vouchers` (Role: `ADMIN`): Tạo voucher mới.
+
+---
+
+## 3. Quy chuẩn Xử lý Lỗi & Mã HTTP (Error Handling for Frontend)
+
+### 3.1. Cấu trúc JSON Lỗi Chuẩn (Standard Error Response Format)
+Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng ($\ge 400$) kèm cấu trúc JSON đồng nhất:
+
+```json
+{
+  "success": false,
+  "message": "Nội dung thông báo lỗi cụ thể bằng Tiếng Việt hiển thị cho người dùng.",
+  "errors": [
+    // Chỉ xuất hiện khi lỗi kiểm tra dữ liệu đầu vào (Zod Validation)
+    {
+      "field": "recipientPhone",
+      "message": "Số điện thoại người nhận không hợp lệ (10 chữ số)"
+    }
+  ]
+}
+```
+
+---
+
+### 3.2. Bảng Mã Trạng Thái HTTP & Kịch Bản Xử Lý Giao Diện (UI Action Guide)
+
+| Mã HTTP Code | Ý nghĩa kỹ thuật | Các tình huống phát sinh | Cách xử lý giao diện phía Frontend (UI/UX) |
+| :---: | :--- | :--- | :--- |
+| **`400 Bad Request`** | Dữ liệu gửi lên không hợp lệ | - Sai định dạng Zod.<br>- Nhập số lượng âm/thập phân.<br>- Giá sản phẩm, tồn kho âm.<br>- Voucher hết hạn, chưa đạt giá trị tối thiểu. | Hiển thị **Toast đỏ (Error Notification)** chứa `res.data.message`. Nếu có mảng `errors`, tô đỏ viền ô input tương ứng (`border-red-500`) và hiển thị lỗi dưới chân ô nhập. |
+| **`401 Unauthorized`** | Chưa đăng nhập hoặc Token hết hạn | - Chưa có header `Authorization: Bearer <token>`.<br>- Access token & Refresh token đều hết hạn.<br>- Đăng nhập sai mật khẩu hoặc sai email. | Tự động chuyển hướng (Redirect) về trang `/login` hoặc bật Popup Modal yêu cầu đăng nhập. Hiển thị Toast thông báo: *"Vui lòng đăng nhập để tiếp tục."* |
+| **`403 Forbidden`** | Không đủ quyền hạn hoặc Vi phạm bảo mật (IDOR) | - Khách hàng cố tình truy cập trang Admin.<br>- Cố ý tạo link thanh toán cho đơn hàng của người khác.<br>- Gọi API test mock payment trên môi trường production. | Chặn hiển thị giao diện, hiển thị trang/màn hình **403 Không có quyền truy cập** hoặc Toast cảnh báo: *"Bạn không có quyền thực hiện hành động này!"* |
+| **`404 Not Found`** | Không tìm thấy tài nguyên | - Sản phẩm không tồn tại hoặc đã bị Admin ẩn (`isActive = false`).<br>- Không tìm thấy mã đơn hàng `orderCode`.<br>- Không tìm thấy món trong giỏ để cập nhật/xóa. | Điều hướng sang trang **404 Not Found** hoặc Toast thông báo: *"Sản phẩm không còn kinh doanh hoặc đã bị xóa."* |
+| **`409 Conflict`** | Xung đột tài nguyên / Hết hàng | - **Hết hàng khi Checkout:** Tồn kho sản phẩm không đủ đáp ứng số lượng đặt mua.<br>- Email đã được đăng ký trước đó. | Bật Dialog/Modal cảnh báo màu cam/đỏ: *"Rất tiếc! Một số sản phẩm trong giỏ đã hết hàng hoặc không đủ số lượng."*, gợi ý người dùng chỉnh sửa giỏ hàng. |
+| **`429 Too Many Requests`** | Vượt quá giới hạn (Rate Limit / Anti-Spam) | - **Vượt quá 2 đơn chờ:** Khách hàng đang có 2 đơn `PENDING_PAYMENT` chưa thanh toán.<br>- Spam click đăng nhập quá 5 lần/phút.<br>- Spam request checkout quá 10 lần/phút. | Bật Dialog cảnh báo: *"Bạn đang có 2 đơn hàng chờ thanh toán. Vui lòng thanh toán đơn cũ hoặc chờ sau 10 phút!"*. Disable nút Đặt hàng tạm thời. |
+| **`500 Internal Server Error`** | Lỗi máy chủ không mong muốn | - Mất kết nối database Supabase.<br>- Lỗi logic ngoại lệ chưa bắt được. | Toast đỏ: *"Hệ thống đang bận hoặc gián đoạn kết nối. Vui lòng thử lại sau ít phút!"* |
+
+---
+
+### 3.3. Chi tiết Kịch bản Lỗi theo từng Luồng Tính năng
+
+#### A. Luồng Đăng nhập & Đăng ký (`/api/auth`)
+* `400 Bad Request`: Mật khẩu dưới 6 ký tự, email sai định dạng.
+* `401 Unauthorized`: *"Email hoặc mật khẩu không chính xác."*
+* `409 Conflict`: *"Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác."*
+* `429 Too Many Requests`: *"Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 1 phút."*
+
+#### B. Luồng Giỏ hàng (`/api/cart`)
+* `400 Bad Request`: *"Số lượng sản phẩm trong giỏ phải là số nguyên dương lớn hơn 0."*
+* `404 Not Found`: *"Món hàng không tồn tại trong giỏ của bạn."* (FE tự động reload lại giỏ).
+
+#### C. Luồng Áp dụng Mã giảm giá (`/api/vouchers/apply`)
+* `400 Bad Request`:
+  - *"Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa."*
+  - *"Mã giảm giá đã hết hạn sử dụng."*
+  - *"Mã giảm giá đã hết lượt sử dụng."*
+  - *"Đơn hàng chưa đạt giá trị tối thiểu (tối thiểu {minOrderValue}đ)."*
+  $\rightarrow$ FE hiển thị dòng chữ đỏ ngay bên dưới ô nhập mã voucher.
+
+#### D. Luồng Đặt hàng & Khóa kho 10 phút (`/api/checkout/lock`)
+* `401 Unauthorized`: Bắt buộc đăng nhập trước khi checkout.
+* `400 Bad Request`:
+  - *"Một số sản phẩm không tồn tại trong hệ thống."*
+  - *"Một số sản phẩm không còn mở bán hoặc đã ngừng kinh doanh."*
+* `409 Conflict`: *"Sản phẩm '{Tên sản phẩm}' chỉ còn lại {kho} chiếc, không đủ số lượng."*
+* `429 Too Many Requests`: *"Bạn đang có 2 đơn hàng chờ thanh toán. Vui lòng thanh toán hoặc chờ hết hạn trước khi tạo đơn mới."*
+
+#### E. Luồng Thanh toán VietQR & Mock (`/api/payments`)
+* `403 Forbidden`: *"Bạn không có quyền thực hiện thanh toán cho đơn hàng của người khác."*
+* `400 Bad Request`: *"Đơn hàng không ở trạng thái chờ thanh toán (Hiện tại: {status})."*
+* `400 Bad Request` (Mock simulate): *"Mã đơn hàng không hợp lệ hoặc đã thanh toán thành công."*
+
+---
+
+### 3.4. Code mẫu Frontend bắt lỗi bằng Axios (Axios Catch Pattern)
+
+```typescript
+try {
+  const response = await baseAPI.post("/checkout/lock", orderPayload);
+  toast.success("Đặt hàng thành công! Vui lòng thanh toán trong 10 phút.");
+  router.push(`/checkout/payment/${response.data.data.order.orderCode}`);
+} catch (error: any) {
+  const statusCode = error.response?.status;
+  const errorMsg = error.response?.data?.message || "Đã có lỗi xảy ra.";
+
+  switch (statusCode) {
+    case 409:
+      // Xung đột kho: Hết hàng
+      toast.error(errorMsg);
+      // Mở modal cho khách chỉnh sửa lại số lượng
+      break;
+    case 429:
+      // Quá 2 đơn pending hoặc spam
+      toast.warning(errorMsg);
+      break;
+    case 401:
+      // Chưa đăng nhập
+      toast.error("Vui lòng đăng nhập để tiến hành đặt hàng.");
+      router.push("/login");
+      break;
+    case 400:
+      // Lỗi dữ liệu nhập hoặc form
+      toast.error(errorMsg);
+      break;
+    default:
+      toast.error("Hệ thống gián đoạn, vui lòng thử lại sau.");
+      break;
+  }
+}
+```
+
