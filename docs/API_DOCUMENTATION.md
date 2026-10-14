@@ -3,14 +3,21 @@
 
 ---
 
-## 1. Cấu hình Chung (General Configuration)
+## 1. Cấu hình Chung & Cơ Chế Lưu Trữ Token (Authentication & Storage)
 
 * **Base URL:** `http://localhost:5000/api`
 * **Content-Type:** `application/json`
-* **Quy ước Xác thực & Session (Axios đã cấu hình sẵn tại `client/src/api/axios.api.ts`):**
-  - **Đã đăng nhập:** Gửi kèm header `Authorization: Bearer <accessToken>` (lấy từ `localStorage.getItem("accessToken")`).
-  - **Khách vãng lai (Guest Cart):** Gửi kèm header `x-session-id: <sessionId>` (tự sinh và lưu trong `localStorage`).
-  - **Làm mới Token (Refresh Token):** Tự động xử lý ngầm qua HTTP-Only Cookie khi gặp mã `401 Unauthorized`.
+* **Cơ chế lưu trữ Token (Trả lời chi tiết câu hỏi của Frontend):**
+  1. **Access Token (Thời hạn ngắn - 15 phút):**
+     - Được Backend trả về trong body JSON khi đăng nhập: `res.data.data.accessToken`.
+     - **Vị trí lưu trữ phía FE:** Lưu trong **`localStorage`** (`localStorage.setItem("accessToken", accessToken)`).
+     - **Cách gửi lên BE:** Đính kèm trong Header: `Authorization: Bearer <accessToken>` (file `client/src/api/axios.api.ts` đã cấu hình Interceptor tự động gắn).
+  2. **Refresh Token (Thời hạn dài - 7 ngày):**
+     - Được Backend tự động lưu vào **`HTTP-Only Cookie`** (tên cookie: `refreshToken`) để bảo mật tuyệt đối, chống tấn công XSS.
+     - **Vị trí lưu trữ phía FE:** Trình duyệt tự động quản lý. **Code JavaScript phía FE KHÔNG CẦN và KHÔNG THỂ đọc/sửa cookie này**.
+     - **Cách gửi lên BE:** Trình duyệt tự động đính kèm cookie mỗi khi gọi API làm mới token (`POST /api/auth/refresh`), chỉ cần Axios bật `withCredentials: true` (đã cấu hình sẵn).
+  3. **Mã phiên khách vãng lai (Guest Session ID):**
+     - Lưu trong **`localStorage`** (`trendyfit_session_id`) và tự động đính kèm qua header `x-session-id`. Khi khách đăng nhập, form login truyền `guestSessionId` lên để BE tự động gộp giỏ hàng.
 
 ---
 
@@ -478,12 +485,13 @@
 ## 3. Quy chuẩn Xử lý Lỗi & Mã HTTP (Error Handling for Frontend)
 
 ### 3.1. Cấu trúc JSON Lỗi Chuẩn (Standard Error Response Format)
-Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng ($\ge 400$) kèm cấu trúc JSON đồng nhất:
+Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng ($\ge 400$) kèm cấu trúc JSON đồng nhất có trường **`errorCode`** để Frontend xử lý chính xác theo điều kiện logic:
 
 ```json
 {
   "success": false,
-  "message": "Nội dung thông báo lỗi cụ thể bằng Tiếng Việt hiển thị cho người dùng.",
+  "errorCode": "INSUFFICIENT_STOCK", // Mã lỗi định danh dạng CHỮ HOA để FE phân nhánh UI
+  "message": "Sản phẩm 'Áo Thun Oversize' chỉ còn lại 1 chiếc, không đủ số lượng.",
   "errors": [
     // Chỉ xuất hiện khi lỗi kiểm tra dữ liệu đầu vào (Zod Validation)
     {
@@ -496,7 +504,32 @@ Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng (
 
 ---
 
-### 3.2. Bảng Mã Trạng Thái HTTP & Kịch Bản Xử Lý Giao Diện (UI Action Guide)
+### 3.2. Bảng Danh Mục Mã Lỗi Định Danh (ErrorCode Reference for Frontend)
+
+| Mã lỗi (`errorCode`) | Mã HTTP | Ý nghĩa nghiệp vụ | Gợi ý hành động phía Frontend (UI/UX) |
+| :--- | :---: | :--- | :--- |
+| **`AUTH_INVALID_CREDENTIALS`** | `401` | Sai tài khoản hoặc mật khẩu | Báo lỗi đỏ dưới ô password: *"Email hoặc mật khẩu không chính xác."* |
+| **`AUTH_EMAIL_EXISTS`** | `400` | Email đăng ký đã tồn tại | Tô đỏ ô email, gợi ý đăng nhập |
+| **`AUTH_UNAUTHORIZED`** | `401` | Chưa đăng nhập hoặc thiếu Bearer token | Chuyển hướng về `/login` hoặc mở modal đăng nhập |
+| **`TOKEN_EXPIRED`** | `401` | Access token hết hạn | Tự động gọi `/api/auth/refresh` lấy token mới (interceptor đã làm sẵn) |
+| **`FORBIDDEN_ACCESS`** | `403` | Không có quyền (vào admin hoặc IDOR) | Chặn truy cập, hiện trang 403 Forbidden |
+| **`ORDER_PENDING_LIMIT_REACHED`** | `429` | Đang có $\ge 2$ đơn hàng chờ thanh toán | **Bật modal cảnh báo:** Nhắc khách vào xem đơn cũ để thanh toán hoặc chờ 10 phút |
+| **`INSUFFICIENT_STOCK`** | `409` | **Hết hàng khi Checkout** | **Bật modal cảnh báo tồn kho:** Báo tên sản phẩm hết hàng, mở giỏ cho khách sửa |
+| **`PRODUCT_INACTIVE`** | `400` | Sản phẩm đã bị Admin ẩn/ngừng kinh doanh | Báo sản phẩm ngừng kinh doanh, xóa khỏi giỏ |
+| **`PRODUCT_NOT_FOUND`** | `404` | Không tìm thấy sản phẩm | Chuyển sang màn hình 404 Không tìm thấy |
+| **`CART_INVALID_QUANTITY`** | `400` | Số lượng giỏ hàng không phải số nguyên dương | Reset ô số lượng về 1, hiện Toast cảnh báo |
+| **`CART_ITEM_NOT_FOUND`** | `404` | Món đồ không tồn tại trong giỏ | Tự động làm mới lại danh sách giỏ hàng |
+| **`VOUCHER_EXPIRED`** | `400` | Mã giảm giá đã hết hạn sử dụng | Hiện chữ đỏ dưới ô nhập voucher: *"Mã giảm giá đã hết hạn"* |
+| **`VOUCHER_USAGE_LIMIT`** | `400` | Mã giảm giá đã hết lượt sử dụng | Hiện chữ đỏ: *"Mã giảm giá đã hết lượt dùng"* |
+| **`VOUCHER_MIN_ORDER_VALUE`** | `400` | Đơn hàng chưa đủ giá trị tối thiểu | Báo số tiền còn thiếu để được áp dụng mã |
+| **`VOUCHER_NOT_FOUND`** | `404` | Mã voucher không tồn tại | Báo mã không tồn tại |
+| **`RATE_LIMIT_EXCEEDED`** | `429` | Bị khóa tạm thời do gửi request quá nhanh | Báo thử lại sau 1 phút, khóa nút bấm tạm thời |
+| **`VALIDATION_ERROR`** | `400` | Sai định dạng Zod | Duyệt qua mảng `errors` để tô đỏ từng ô nhập tương ứng |
+| **`INTERNAL_SERVER_ERROR`** | `500` | Lỗi máy chủ không mong muốn | Toast thông báo hệ thống đang bận |
+
+---
+
+### 3.3. Bảng Mã Trạng Thái HTTP & Kịch Bản Xử Lý Giao Diện (UI Action Guide)
 
 | Mã HTTP Code | Ý nghĩa kỹ thuật | Các tình huống phát sinh | Cách xử lý giao diện phía Frontend (UI/UX) |
 | :---: | :--- | :--- | :--- |
@@ -510,42 +543,7 @@ Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng (
 
 ---
 
-### 3.3. Chi tiết Kịch bản Lỗi theo từng Luồng Tính năng
-
-#### A. Luồng Đăng nhập & Đăng ký (`/api/auth`)
-* `400 Bad Request`: Mật khẩu dưới 6 ký tự, email sai định dạng.
-* `401 Unauthorized`: *"Email hoặc mật khẩu không chính xác."*
-* `409 Conflict`: *"Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác."*
-* `429 Too Many Requests`: *"Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau 1 phút."*
-
-#### B. Luồng Giỏ hàng (`/api/cart`)
-* `400 Bad Request`: *"Số lượng sản phẩm trong giỏ phải là số nguyên dương lớn hơn 0."*
-* `404 Not Found`: *"Món hàng không tồn tại trong giỏ của bạn."* (FE tự động reload lại giỏ).
-
-#### C. Luồng Áp dụng Mã giảm giá (`/api/vouchers/apply`)
-* `400 Bad Request`:
-  - *"Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa."*
-  - *"Mã giảm giá đã hết hạn sử dụng."*
-  - *"Mã giảm giá đã hết lượt sử dụng."*
-  - *"Đơn hàng chưa đạt giá trị tối thiểu (tối thiểu {minOrderValue}đ)."*
-  $\rightarrow$ FE hiển thị dòng chữ đỏ ngay bên dưới ô nhập mã voucher.
-
-#### D. Luồng Đặt hàng & Khóa kho 10 phút (`/api/checkout/lock`)
-* `401 Unauthorized`: Bắt buộc đăng nhập trước khi checkout.
-* `400 Bad Request`:
-  - *"Một số sản phẩm không tồn tại trong hệ thống."*
-  - *"Một số sản phẩm không còn mở bán hoặc đã ngừng kinh doanh."*
-* `409 Conflict`: *"Sản phẩm '{Tên sản phẩm}' chỉ còn lại {kho} chiếc, không đủ số lượng."*
-* `429 Too Many Requests`: *"Bạn đang có 2 đơn hàng chờ thanh toán. Vui lòng thanh toán hoặc chờ hết hạn trước khi tạo đơn mới."*
-
-#### E. Luồng Thanh toán VietQR & Mock (`/api/payments`)
-* `403 Forbidden`: *"Bạn không có quyền thực hiện thanh toán cho đơn hàng của người khác."*
-* `400 Bad Request`: *"Đơn hàng không ở trạng thái chờ thanh toán (Hiện tại: {status})."*
-* `400 Bad Request` (Mock simulate): *"Mã đơn hàng không hợp lệ hoặc đã thanh toán thành công."*
-
----
-
-### 3.4. Code mẫu Frontend bắt lỗi bằng Axios (Axios Catch Pattern)
+### 3.4. Code mẫu Frontend bắt lỗi theo `errorCode` bằng Axios (Best Practice)
 
 ```typescript
 try {
@@ -553,30 +551,42 @@ try {
   toast.success("Đặt hàng thành công! Vui lòng thanh toán trong 10 phút.");
   router.push(`/checkout/payment/${response.data.data.order.orderCode}`);
 } catch (error: any) {
-  const statusCode = error.response?.status;
+  const errorCode = error.response?.data?.errorCode;
   const errorMsg = error.response?.data?.message || "Đã có lỗi xảy ra.";
 
-  switch (statusCode) {
-    case 409:
-      // Xung đột kho: Hết hàng
-      toast.error(errorMsg);
-      // Mở modal cho khách chỉnh sửa lại số lượng
+  // Bắt lỗi chính xác theo errorCode của Backend:
+  switch (errorCode) {
+    case "INSUFFICIENT_STOCK":
+      // Hết hàng: Mở modal cho khách chọn lại số lượng hoặc đổi sản phẩm
+      setStockErrorModalOpen(true);
       break;
-    case 429:
-      // Quá 2 đơn pending hoặc spam
+
+    case "ORDER_PENDING_LIMIT_REACHED":
+      // Quá 2 đơn chờ thanh toán
       toast.warning(errorMsg);
+      // Gợi ý chuyển sang trang danh sách đơn hàng để thanh toán đơn cũ
+      router.push("/orders");
       break;
-    case 401:
-      // Chưa đăng nhập
+
+    case "AUTH_UNAUTHORIZED":
       toast.error("Vui lòng đăng nhập để tiến hành đặt hàng.");
       router.push("/login");
       break;
-    case 400:
-      // Lỗi dữ liệu nhập hoặc form
-      toast.error(errorMsg);
+
+    case "VOUCHER_EXPIRED":
+    case "VOUCHER_USAGE_LIMIT":
+    case "VOUCHER_MIN_ORDER_VALUE":
+      // Hiển thị lỗi voucher ngay dưới ô nhập
+      setVoucherErrorMessage(errorMsg);
       break;
+
+    case "RATE_LIMIT_EXCEEDED":
+      toast.error("Thao tác quá nhanh, vui lòng chờ 1 phút rồi thử lại.");
+      break;
+
     default:
-      toast.error("Hệ thống gián đoạn, vui lòng thử lại sau.");
+      // Các lỗi khác hiển thị câu thông báo mặc định từ BE
+      toast.error(errorMsg);
       break;
   }
 }

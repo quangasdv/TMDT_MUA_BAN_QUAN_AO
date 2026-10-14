@@ -12,6 +12,7 @@ export const errorHandler = (
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,
+      errorCode: "VALIDATION_ERROR",
       message: "Dữ liệu gửi lên không đúng định dạng kiểm tra.",
       errors: err.errors.map((e) => ({
         field: e.path.join("."),
@@ -22,10 +23,20 @@ export const errorHandler = (
   }
 
   const statusCode = err.statusCode || 500;
+  const errorCode =
+    err.errorCode ||
+    (statusCode === 429
+      ? "RATE_LIMIT_EXCEEDED"
+      : statusCode === 409
+      ? "INSUFFICIENT_STOCK"
+      : statusCode >= 500
+      ? "INTERNAL_SERVER_ERROR"
+      : "BAD_REQUEST");
   const message = err.message || "Đã xảy ra lỗi nội bộ máy chủ.";
 
   res.status(statusCode).json({
     success: false,
+    errorCode,
     message,
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });

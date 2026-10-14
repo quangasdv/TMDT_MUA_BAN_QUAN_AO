@@ -9,6 +9,7 @@ export class VoucherController {
       if (!voucherCode || totalAmount === undefined) {
         res.status(400).json({
           success: false,
+          errorCode: "VALIDATION_ERROR",
           message: "Vui lòng cung cấp mã voucher và tổng giá trị đơn hàng.",
         });
         return;
@@ -21,6 +22,7 @@ export class VoucherController {
       if (!voucher || !voucher.isActive) {
         res.status(404).json({
           success: false,
+          errorCode: "VOUCHER_NOT_FOUND",
           message: "Mã giảm giá không tồn tại hoặc đã bị khóa.",
         });
         return;
@@ -29,6 +31,7 @@ export class VoucherController {
       if (new Date() > voucher.expiresAt) {
         res.status(400).json({
           success: false,
+          errorCode: "VOUCHER_EXPIRED",
           message: "Mã giảm giá đã hết hạn sử dụng.",
         });
         return;
@@ -37,6 +40,7 @@ export class VoucherController {
       if (voucher.usedCount >= voucher.usageLimit) {
         res.status(400).json({
           success: false,
+          errorCode: "VOUCHER_USAGE_LIMIT",
           message: "Mã giảm giá đã hết lượt sử dụng.",
         });
         return;
@@ -46,6 +50,7 @@ export class VoucherController {
       if (orderTotal < Number(voucher.minOrderValue)) {
         res.status(400).json({
           success: false,
+          errorCode: "VOUCHER_MIN_ORDER_VALUE",
           message: `Đơn hàng tối thiểu phải từ ${voucher.minOrderValue.toLocaleString()}đ để áp dụng mã này.`,
         });
         return;

@@ -16,7 +16,7 @@ export class PaymentController {
       });
 
       if (!order) {
-        res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        res.status(404).json({ success: false, errorCode: "ORDER_NOT_FOUND", message: "Không tìm thấy đơn hàng." });
         return;
       }
 
@@ -24,6 +24,7 @@ export class PaymentController {
       if (req.user?.role === "CUSTOMER" && order.userId !== req.user.id) {
         res.status(403).json({
           success: false,
+          errorCode: "PAYMENT_FORBIDDEN",
           message: "Bạn không có quyền thực hiện thanh toán cho đơn hàng của người khác.",
         });
         return;
@@ -32,6 +33,7 @@ export class PaymentController {
       if (order.status !== "PENDING_PAYMENT") {
         res.status(400).json({
           success: false,
+          errorCode: "ORDER_NOT_PENDING",
           message: `Đơn hàng không ở trạng thái chờ thanh toán (Hiện tại: ${order.status}).`,
         });
         return;
@@ -83,6 +85,7 @@ export class PaymentController {
       if (!ENV.PAYMENT_MOCK_MODE || ENV.NODE_ENV === "production") {
         res.status(403).json({
           success: false,
+          errorCode: "MOCK_PAYMENT_DISABLED",
           message: "Tính năng giả lập thanh toán đã bị khóa trong môi trường production vì lý do bảo mật.",
         });
         return;
@@ -96,7 +99,7 @@ export class PaymentController {
       });
 
       if (!order) {
-        res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        res.status(404).json({ success: false, errorCode: "ORDER_NOT_FOUND", message: "Không tìm thấy đơn hàng." });
         return;
       }
 
@@ -104,6 +107,7 @@ export class PaymentController {
       if (order.userId !== userId && req.user?.role === "CUSTOMER") {
         res.status(403).json({
           success: false,
+          errorCode: "PAYMENT_FORBIDDEN",
           message: "Bạn không có quyền kích hoạt thanh toán cho đơn hàng của người khác.",
         });
         return;

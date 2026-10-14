@@ -94,6 +94,7 @@ export class ProductController {
       if (!product || !product.isActive) {
         res.status(404).json({
           success: false,
+          errorCode: "PRODUCT_NOT_FOUND",
           message: "Không tìm thấy sản phẩm yêu cầu hoặc sản phẩm đã ngừng kinh doanh.",
         });
         return;

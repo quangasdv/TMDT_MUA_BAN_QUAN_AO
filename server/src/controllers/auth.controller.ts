@@ -31,6 +31,7 @@ export class AuthController {
       if (existingUser) {
         res.status(400).json({
           success: false,
+          errorCode: "AUTH_EMAIL_EXISTS",
           message: "Email này đã được sử dụng. Vui lòng chọn email khác.",
         });
         return;
@@ -76,6 +77,7 @@ export class AuthController {
       if (!user) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_INVALID_CREDENTIALS",
           message: "Email hoặc mật khẩu không chính xác.",
         });
         return;
@@ -85,6 +87,7 @@ export class AuthController {
       if (!isPasswordValid) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_INVALID_CREDENTIALS",
           message: "Email hoặc mật khẩu không chính xác.",
         });
         return;
@@ -174,6 +177,7 @@ export class AuthController {
       if (!refreshToken) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_REFRESH_TOKEN_MISSING",
           message: "Không tìm thấy refresh token trong cookie.",
         });
         return;
@@ -187,6 +191,7 @@ export class AuthController {
       if (!user) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_USER_NOT_FOUND",
           message: "Tài khoản không tồn tại hoặc đã bị khóa.",
         });
         return;
@@ -206,6 +211,7 @@ export class AuthController {
     } catch (error) {
       res.status(401).json({
         success: false,
+        errorCode: "AUTH_REFRESH_TOKEN_INVALID",
         message: "Refresh token không hợp lệ hoặc đã hết hạn.",
       });
     }

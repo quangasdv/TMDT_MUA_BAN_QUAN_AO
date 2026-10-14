@@ -7,6 +7,7 @@ export const requireRoles = (allowedRoles: Role[]) => {
     if (!req.user) {
       res.status(401).json({
         success: false,
+        errorCode: "AUTH_UNAUTHORIZED",
         message: "Yêu cầu đăng nhập trước khi thực hiện hành động này.",
       });
       return;
@@ -15,6 +16,7 @@ export const requireRoles = (allowedRoles: Role[]) => {
     if (!allowedRoles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
+        errorCode: "FORBIDDEN_ACCESS",
         message: `Từ chối truy cập. Chức năng này yêu cầu quyền: ${allowedRoles.join(" hoặc ")}.`,
       });
       return;

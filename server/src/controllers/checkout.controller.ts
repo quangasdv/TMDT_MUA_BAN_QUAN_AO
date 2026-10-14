@@ -33,7 +33,7 @@ export class CheckoutController {
     try {
       const userId = req.user?.id;
       if (!userId) {
-        res.status(401).json({ success: false, message: "Vui lòng đăng nhập để tiến hành đặt hàng." });
+        res.status(401).json({ success: false, errorCode: "AUTH_UNAUTHORIZED", message: "Vui lòng đăng nhập để tiến hành đặt hàng." });
         return;
       }
 
@@ -49,6 +49,7 @@ export class CheckoutController {
       if (pendingCount >= 2) {
         res.status(429).json({
           success: false,
+          errorCode: "ORDER_PENDING_LIMIT_REACHED",
           message: "Bạn đang có 2 đơn hàng chờ thanh toán. Vui lòng thanh toán hoặc chờ hết hạn trước khi tạo đơn mới.",
         });
         return;
@@ -62,13 +63,13 @@ export class CheckoutController {
       });
 
       if (variants.length !== items.length) {
-        res.status(400).json({ success: false, message: "Một số sản phẩm không tồn tại trong hệ thống." });
+        res.status(400).json({ success: false, errorCode: "PRODUCT_NOT_FOUND", message: "Một số sản phẩm không tồn tại trong hệ thống." });
         return;
       }
 
       // Chặn đặt hàng các sản phẩm đã bị ẩn (isActive = false)
       if (variants.some((v) => !v.product.isActive)) {
-        res.status(400).json({ success: false, message: "Một số sản phẩm không còn mở bán hoặc đã ngừng kinh doanh." });
+        res.status(400).json({ success: false, errorCode: "PRODUCT_INACTIVE", message: "Một số sản phẩm không còn mở bán hoặc đã ngừng kinh doanh." });
         return;
       }
 
@@ -187,11 +188,11 @@ export class CheckoutController {
       });
     } catch (error: any) {
       if (error.statusCode === 429) {
-        res.status(429).json({ success: false, message: error.message });
+        res.status(429).json({ success: false, errorCode: "ORDER_PENDING_LIMIT_REACHED", message: error.message });
         return;
       }
       if (error.message?.includes("hết hàng")) {
-        res.status(409).json({ success: false, message: error.message });
+        res.status(409).json({ success: false, errorCode: "INSUFFICIENT_STOCK", message: error.message });
         return;
       }
       next(error);

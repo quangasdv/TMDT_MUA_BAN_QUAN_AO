@@ -65,6 +65,7 @@ export class CartController {
       if (!variantId || typeof variantId !== "string") {
         res.status(400).json({
           success: false,
+          errorCode: "VALIDATION_ERROR",
           message: "Mã biến thể sản phẩm (variantId) là bắt buộc.",
         });
         return;
@@ -73,6 +74,7 @@ export class CartController {
       if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity <= 0) {
         res.status(400).json({
           success: false,
+          errorCode: "CART_INVALID_QUANTITY",
           message: "Số lượng sản phẩm thêm vào giỏ phải là số nguyên dương (tối thiểu là 1).",
         });
         return;
@@ -83,6 +85,7 @@ export class CartController {
       if (!cart) {
         res.status(400).json({
           success: false,
+          errorCode: "AUTH_SESSION_REQUIRED",
           message: "Cần cung cấp tài khoản đăng nhập hoặc mã phiên khách (x-session-id).",
         });
         return;
@@ -124,7 +127,7 @@ export class CartController {
       const { quantity } = req.body;
 
       if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 0) {
-        res.status(400).json({ success: false, message: "Số lượng cập nhật phải là số nguyên không âm." });
+        res.status(400).json({ success: false, errorCode: "CART_INVALID_QUANTITY", message: "Số lượng cập nhật phải là số nguyên không âm." });
         return;
       }
 
@@ -132,6 +135,7 @@ export class CartController {
       if (!cart) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_SESSION_REQUIRED",
           message: "Cần cung cấp phiên đăng nhập hoặc mã định danh khách vãng lai (x-session-id).",
         });
         return;
@@ -142,6 +146,7 @@ export class CartController {
       if (!cartItem || cartItem.cartId !== cart.id) {
         res.status(404).json({
           success: false,
+          errorCode: "CART_ITEM_NOT_FOUND",
           message: "Không tìm thấy món hàng này trong giỏ hàng của bạn.",
         });
         return;
@@ -175,6 +180,7 @@ export class CartController {
       if (!cart) {
         res.status(401).json({
           success: false,
+          errorCode: "AUTH_SESSION_REQUIRED",
           message: "Cần cung cấp phiên đăng nhập hoặc mã định danh khách vãng lai (x-session-id).",
         });
         return;
@@ -185,6 +191,7 @@ export class CartController {
       if (!cartItem || cartItem.cartId !== cart.id) {
         res.status(404).json({
           success: false,
+          errorCode: "CART_ITEM_NOT_FOUND",
           message: "Không tìm thấy món hàng này trong giỏ hàng của bạn.",
         });
         return;

@@ -26,6 +26,7 @@ export const authenticateJwt = (
   if (!token) {
     res.status(401).json({
       success: false,
+      errorCode: "AUTH_UNAUTHORIZED",
       message: "Bạn chưa đăng nhập hoặc phiên làm việc đã kết thúc.",
     });
     return;
@@ -38,6 +39,7 @@ export const authenticateJwt = (
   } catch (error) {
     res.status(401).json({
       success: false,
+      errorCode: "TOKEN_EXPIRED",
       message: "Mã xác thực không hợp lệ hoặc đã hết hạn.",
     });
   }

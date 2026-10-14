@@ -13,6 +13,7 @@ export const apiLimiter = rateLimit({
   skip: isTestDisabled,
   message: {
     success: false,
+    errorCode: "RATE_LIMIT_EXCEEDED",
     message: "Bạn đã gửi quá nhiều yêu cầu đến máy chủ. Vui lòng thử lại sau 1 phút.",
   },
 });
@@ -29,6 +30,7 @@ export const authLimiter = rateLimit({
   skip: isTestDisabled,
   message: {
     success: false,
+    errorCode: "RATE_LIMIT_EXCEEDED",
     message: "Quá nhiều lần gửi yêu cầu xác thực tài khoản. Vui lòng thử lại sau 1 phút.",
   },
 });
@@ -45,6 +47,7 @@ export const checkoutLimiter = rateLimit({
   skip: isTestDisabled,
   message: {
     success: false,
+    errorCode: "RATE_LIMIT_EXCEEDED",
     message: "Thao tác đặt hàng quá dồn dập. Vui lòng chờ giây lát rồi thử lại.",
   },
 });
