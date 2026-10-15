@@ -1,76 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { ArrowRight } from "lucide-react";
+import "./style/register.css";
+import { ArrowRight, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthLayout from "../layout";
-import { baseAPI } from "@/api/axios.api";
-
-const registerSchema = z
-  .object({
-    fullName: z.string().min(2, "Họ và tên tối thiểu 2 ký tự"),
-    email: z.string().email("Email không hợp lệ"),
-    password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
-    confirmPassword: z.string().min(6, "Vui lòng nhập lại mật khẩu"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu xác nhận không trùng khớp",
-    path: ["confirmPassword"],
-  });
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { useRegisterForm } from "./hooks/use-register";
 
 export default function Register() {
-  const router = useRouter();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
+  // Logic gọi API, xác thực form và phân nhánh lỗi được tách hoàn toàn vào hook useRegisterForm
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-  });
-
-  const onSubmit = async (data: RegisterFormValues) => {
-    try {
-      setErrorMessage(null);
-      setSuccessMessage(null);
-
-      const res = await baseAPI.post("/auth/register", {
-        fullName: data.fullName,
-        email: data.email,
-        password: data.password,
-      });
-
-      if (res.data?.success) {
-        setSuccessMessage("Đăng ký tài khoản thành công! Đang chuyển hướng sang đăng nhập...");
-        setTimeout(() => {
-          router.push("/login");
-        }, 1200);
-      }
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin đăng ký.";
-      setErrorMessage(msg);
-    }
-  };
+    formState: { errors },
+    isSubmitting,
+    errorMessage,
+    successMessage,
+  } = useRegisterForm();
 
   return (
     <AuthLayout>
       <div className="auth-frame">
         <section className="auth-form-panel" aria-labelledby="register-title">
           <header className="auth-topbar">
-            <Link className="auth-brand" href="/" aria-label="Mở trang chủ Nếp">
+            <Link className="auth-brand" href="/" aria-label="Mở trang chủ Trendyfit">
               <span className="auth-brand-mark" aria-hidden="true" />
               <span className="auth-brand-name">Trendyfit</span>
             </Link>
@@ -87,64 +42,176 @@ export default function Register() {
               Khám phá những lựa chọn mang dấu ấn riêng và lưu lại điều bạn yêu thích.
             </p>
 
-            <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
+            <form className="auth-form" onSubmit={handleSubmit} noValidate>
+              {/* Alert thông báo lỗi tổng quan với màu đỏ rõ nét */}
               {errorMessage && (
                 <div
+                  role="alert"
                   style={{
-                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "11px 14px",
                     backgroundColor: "#fef2f2",
                     color: "#dc2626",
                     border: "1px solid #fecaca",
                     borderRadius: "8px",
-                    fontSize: "14px",
+                    fontSize: "13px",
+                    lineHeight: "1.45",
                   }}
                 >
-                  {errorMessage}
+                  <AlertCircle
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      minWidth: "16px",
+                      color: "#dc2626",
+                      marginTop: "2px",
+                    }}
+                  />
+                  <span style={{ color: "#dc2626", fontWeight: 500 }}>
+                    {errorMessage}
+                  </span>
                 </div>
               )}
+
+              {/* Alert thông báo thành công */}
               {successMessage && (
                 <div
+                  role="status"
                   style={{
-                    padding: "10px 14px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    padding: "11px 14px",
                     backgroundColor: "#f0fdf4",
                     color: "#16a34a",
                     border: "1px solid #bbf7d0",
                     borderRadius: "8px",
-                    fontSize: "14px",
+                    fontSize: "13px",
+                    lineHeight: "1.45",
                   }}
                 >
-                  {successMessage}
+                  <CheckCircle2
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      minWidth: "16px",
+                      color: "#16a34a",
+                      marginTop: "2px",
+                    }}
+                  />
+                  <span style={{ color: "#15803d", fontWeight: 500 }}>
+                    {successMessage}
+                  </span>
                 </div>
               )}
 
+              {/* Trường Họ và tên */}
               <div className="auth-field">
                 <Label htmlFor="fullName">Họ và tên</Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Nguyễn Văn A"
+                  placeholder="Nguyễn Văn Khách Hàng"
                   autoComplete="name"
+                  aria-invalid={!!errors.fullName}
+                  style={{
+                    borderColor: errors.fullName ? "#ef4444" : undefined,
+                    backgroundColor: errors.fullName ? "#fffafb" : undefined,
+                  }}
+                  disabled={isSubmitting}
                   {...register("fullName")}
                 />
                 {errors.fullName && (
-                  <p className="text-sm text-red-500 mt-1">{errors.fullName.message}</p>
+                  <p
+                    className="auth-field-error"
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      marginTop: "4px",
+                      marginBottom: "0",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {errors.fullName.message}
+                  </p>
                 )}
               </div>
 
+              {/* Trường Email */}
               <div className="auth-field">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ten@email.com"
+                  placeholder="customer@gmail.com"
                   autoComplete="email"
+                  aria-invalid={!!errors.email}
+                  style={{
+                    borderColor: errors.email ? "#ef4444" : undefined,
+                    backgroundColor: errors.email ? "#fffafb" : undefined,
+                  }}
+                  disabled={isSubmitting}
                   {...register("email")}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
+                  <p
+                    className="auth-field-error"
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      marginTop: "4px",
+                      marginBottom: "0",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
+              {/* Trường Số điện thoại (tùy chọn) */}
+              <div className="auth-field">
+                <Label htmlFor="phone">
+                  Số điện thoại{" "}
+                  <span style={{ fontSize: "11px", color: "#8b8b81", fontWeight: "normal" }}>
+                    (Không bắt buộc)
+                  </span>
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="0988888888"
+                  autoComplete="tel"
+                  aria-invalid={!!errors.phone}
+                  style={{
+                    borderColor: errors.phone ? "#ef4444" : undefined,
+                    backgroundColor: errors.phone ? "#fffafb" : undefined,
+                  }}
+                  disabled={isSubmitting}
+                  {...register("phone")}
+                />
+                {errors.phone && (
+                  <p
+                    className="auth-field-error"
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      marginTop: "4px",
+                      marginBottom: "0",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {errors.phone.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Trường Mật khẩu */}
               <div className="auth-field">
                 <Label htmlFor="password">Mật khẩu</Label>
                 <Input
@@ -152,13 +219,32 @@ export default function Register() {
                   type="password"
                   placeholder="Tối thiểu 6 ký tự"
                   autoComplete="new-password"
+                  aria-invalid={!!errors.password}
+                  style={{
+                    borderColor: errors.password ? "#ef4444" : undefined,
+                    backgroundColor: errors.password ? "#fffafb" : undefined,
+                  }}
+                  disabled={isSubmitting}
                   {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
+                  <p
+                    className="auth-field-error"
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      marginTop: "4px",
+                      marginBottom: "0",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
+              {/* Trường Xác nhận mật khẩu */}
               <div className="auth-field">
                 <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
                 <Input
@@ -166,20 +252,45 @@ export default function Register() {
                   type="password"
                   placeholder="Nhập lại mật khẩu"
                   autoComplete="new-password"
+                  aria-invalid={!!errors.confirmPassword}
+                  style={{
+                    borderColor: errors.confirmPassword ? "#ef4444" : undefined,
+                    backgroundColor: errors.confirmPassword ? "#fffafb" : undefined,
+                  }}
+                  disabled={isSubmitting}
                   {...register("confirmPassword")}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-red-500 mt-1">{errors.confirmPassword.message}</p>
+                  <p
+                    className="auth-field-error"
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      marginTop: "4px",
+                      marginBottom: "0",
+                      lineHeight: "1.3",
+                    }}
+                  >
+                    {errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
 
               <p className="auth-signin">
-                Đã có tài khoản? <Link href="/login">Đăng nhập</Link>
+                Đã có tài khoản? <Link href="/login">Đăng nhập ngay</Link>
               </p>
 
               <Button className="auth-submit" type="submit" disabled={isSubmitting}>
-                <span className="auth-submit-label">
-                  {isSubmitting ? "Đang xử lý..." : "Tạo tài khoản"}
+                <span className="auth-submit-label" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    "Tạo tài khoản"
+                  )}
                 </span>
                 <ArrowRight aria-hidden="true" size={16} />
               </Button>
