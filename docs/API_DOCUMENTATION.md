@@ -26,6 +26,11 @@
 ### 2.1. Xác thực & Tài khoản (`/api/auth`)
 
 #### `POST /api/auth/register` - Đăng ký tài khoản mới
+* **Ràng buộc kiểm tra dữ liệu (Validation Rules):**
+  - **`password` (Mật khẩu):** Bắt buộc, **tối thiểu 6 ký tự** (`min(6)`). Không giới hạn độ dài tối đa, không ép buộc ký tự hoa hay ký tự đặc biệt (tuy nhiên khuyến nghị sử dụng mật khẩu an toàn).
+  - **`email`:** Bắt buộc, đúng định dạng email tiêu chuẩn (`name@domain.com`).
+  - **`fullName` (Họ và tên):** Bắt buộc, **tối thiểu 2 ký tự** (`min(2)`).
+  - **`phone` (Số điện thoại):** Tùy chọn (không bắt buộc).
 * **Request Body:**
 ```json
 {
