@@ -1,0 +1,23 @@
+@import "../../register/style/register.css";
+
+/* Tùy chỉnh bổ sung riêng cho trang Đăng nhập */
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.auth-forgot-link {
+  color: #55574c;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.auth-forgot-link:hover {
+  color: #1a1b16;
+  text-decoration: underline;
+}
+

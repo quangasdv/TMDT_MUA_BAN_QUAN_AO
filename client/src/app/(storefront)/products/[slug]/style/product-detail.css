@@ -1,0 +1,76 @@
+/* Product Detail Custom Styling */
+.thumbnail-active {
+  border-color: hsl(var(--foreground)) !important;
+  box-shadow: 0 0 0 1.5px hsl(var(--foreground));
+}
+
+.table-size-chart {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-size-chart th,
+.table-size-chart td {
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.table-size-chart th {
+  background-color: hsl(var(--muted));
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--foreground));
+}
+
+.table-size-chart td {
+  font-size: 13px;
+  color: hsl(var(--foreground) / 0.85);
+}
+
+.table-size-chart tr:last-child td {
+  border-bottom: none;
+}
+
+/* Smart Fit Card Gradient */
+.smart-fit-card {
+  border: 1px solid hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--muted) / 0.4) 0%, hsl(var(--background)) 100%);
+}
+
+/* Image zoom container */
+.product-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-image-container img {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-image-container:hover img {
+  transform: scale(1.03);
+}
+
+/* Smart Fit Card Gradient */
+.smart-fit-card {
+  border: 1px solid hsl(var(--border));
+  background: linear-gradient(135deg, hsl(var(--muted) / 0.4) 0%, hsl(var(--background)) 100%);
+}
+
+/* Image zoom container */
+.product-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-image-container img {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.product-image-container:hover img {
+  transform: scale(1.03);
+}
+

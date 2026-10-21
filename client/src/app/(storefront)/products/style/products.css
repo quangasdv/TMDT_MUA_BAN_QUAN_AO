@@ -1,0 +1,21 @@
+/* Products Feature Custom Styling */
+.filter-sidebar-sticky {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.filter-sidebar-sticky::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-sidebar-sticky::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-sidebar-sticky::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import AuthLayout from "../layout";
 import { useRegisterForm } from "./hooks/use-register";
 
 export default function Register() {
@@ -21,8 +20,7 @@ export default function Register() {
   } = useRegisterForm();
 
   return (
-    <AuthLayout>
-      <div className="auth-frame">
+    <div className="auth-frame">
         <section className="auth-form-panel" aria-labelledby="register-title">
           <header className="auth-topbar">
             <Link className="auth-brand" href="/" aria-label="Mở trang chủ Trendyfit">
@@ -334,7 +332,6 @@ export default function Register() {
             </div>
           </div>
         </aside>
-      </div>
-    </AuthLayout>
+    </div>
   );
 }

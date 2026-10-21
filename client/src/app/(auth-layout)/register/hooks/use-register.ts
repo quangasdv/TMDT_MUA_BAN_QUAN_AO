@@ -13,6 +13,7 @@ import {
   registerSchema,
   type RegisterFormValues,
 } from "../validation/register.validation";
+import { toast } from "react-toastify";
 
 interface UseRegisterOptions {
   onSuccess?: (res: RegisterResponse) => void;
@@ -46,9 +47,9 @@ export function useRegister(
 
     registerMutation.mutate(payload, {
       onSuccess: (res) => {
-        setSuccessMessage(
-          res.message || "Đăng ký tài khoản thành công! Đang chuyển hướng sang đăng nhập..."
-        );
+        const successText = res.message || "Đăng ký tài khoản thành công! Đang chuyển hướng sang đăng nhập...";
+        setSuccessMessage(successText);
+        toast.success(res.message || "Đăng ký tài khoản thành công!");
 
         if (options?.onSuccess) {
           options.onSuccess(res);
