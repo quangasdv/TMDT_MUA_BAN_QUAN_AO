@@ -73,16 +73,28 @@ export function useOutfits() {
   }, [rawSlots]);
 
   // Chọn một sản phẩm cho slot cụ thể
+  // Chọn một sản phẩm cho slot cụ thể (Ràng buộc thân trên: Chọn 1 trong 2 giữa Áo khoác & Áo thun)
   const selectItemForSlot = useCallback(
     (slot: OutfitSlotType, product: SlotProduct, variant?: SlotProductVariant) => {
       const targetVariant = variant || product.variants[0];
       if (!targetVariant) return;
 
-      setCanvasItems((prev) => ({
-        ...prev,
-        [slot]: { product, variant: targetVariant },
-      }));
-      setSelectedOutfitId(null); // Khi người dùng tùy biến riêng, bỏ highlight preset
+      setCanvasItems((prev) => {
+        const next = {
+          ...prev,
+          [slot]: { product, variant: targetVariant },
+        };
+        // Nếu chọn Áo khoác ngoài -> Tự động nhả Áo thun
+        if (slot === "OUTERWEAR") {
+          next.TOP = null;
+        }
+        // Nếu chọn Áo thun / Áo trong -> Tự động nhả Áo khoác
+        else if (slot === "TOP") {
+          next.OUTERWEAR = null;
+        }
+        return next;
+      });
+      setSelectedOutfitId(null);
     },
     []
   );

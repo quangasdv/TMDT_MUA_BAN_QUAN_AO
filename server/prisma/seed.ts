@@ -96,10 +96,10 @@ async function main() {
       categoryId: catTop.id,
       variants: {
         create: [
-          { sku: "TEE-BLK-S", color: "Đen", size: "S", stockQuantity: 20, imageUrl: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500" },
-          { sku: "TEE-BLK-M", color: "Đen", size: "M", stockQuantity: 15, imageUrl: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500" },
-          { sku: "TEE-BLK-L", color: "Đen", size: "L", stockQuantity: 10, imageUrl: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500" },
-          { sku: "TEE-WHT-M", color: "Trắng", size: "M", stockQuantity: 25, imageUrl: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500" },
+          { sku: "TEE-BLK-S", color: "Đen", size: "S", stockQuantity: 20, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-BLK-M", color: "Đen", size: "M", stockQuantity: 15, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-BLK-L", color: "Đen", size: "L", stockQuantity: 10, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-WHT-M", color: "Trắng", size: "M", stockQuantity: 25, imageUrl: "/outfits/tshirt-white.png" },
         ],
       },
       sizeCharts: {
@@ -125,9 +125,9 @@ async function main() {
       categoryId: catBottom.id,
       variants: {
         create: [
-          { sku: "JEA-BLU-M", color: "Xanh Wash", size: "M", stockQuantity: 15, imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500" },
-          { sku: "JEA-BLU-L", color: "Xanh Wash", size: "L", stockQuantity: 8, imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500" },
-          { sku: "JEA-BLK-M", color: "Đen Khói", size: "M", stockQuantity: 12, imageUrl: "https://images.unsplash.com/photo-1604176354204-9268737828e4?w=500" },
+          { sku: "JEA-BLU-M", color: "Xanh Wash", size: "M", stockQuantity: 15, imageUrl: "/outfits/pants-jean-blue.png" },
+          { sku: "JEA-BLU-L", color: "Xanh Wash", size: "L", stockQuantity: 8, imageUrl: "/outfits/pants-jean-blue.png" },
+          { sku: "JEA-BLK-M", color: "Đen Khói", size: "M", stockQuantity: 12, imageUrl: "/outfits/pants-jean-black.png" },
         ],
       },
       sizeCharts: {
@@ -151,8 +151,8 @@ async function main() {
       categoryId: catOuter.id,
       variants: {
         create: [
-          { sku: "AO-BLAZER-DEN-L", color: "Đen", size: "L", stockQuantity: 1, imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500" },
-          { sku: "AO-BLAZER-DEN-M", color: "Đen", size: "M", stockQuantity: 5, imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500" },
+          { sku: "AO-BLAZER-DEN-L", color: "Đen", size: "L", stockQuantity: 1, imageUrl: "/outfits/jacket-blazer.png" },
+          { sku: "AO-BLAZER-DEN-M", color: "Đen", size: "M", stockQuantity: 5, imageUrl: "/outfits/jacket-blazer.png" },
         ],
       },
       sizeCharts: {
@@ -176,8 +176,8 @@ async function main() {
       categoryId: catShoes.id,
       variants: {
         create: [
-          { sku: "SNK-WHT-41", color: "Trắng", size: "41", stockQuantity: 10, imageUrl: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500" },
-          { sku: "SNK-WHT-42", color: "Trắng", size: "42", stockQuantity: 12, imageUrl: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=500" },
+          { sku: "SNK-WHT-41", color: "Trắng", size: "41", stockQuantity: 10, imageUrl: "/outfits/shoes-sneaker-white.png" },
+          { sku: "SNK-WHT-42", color: "Trắng", size: "42", stockQuantity: 12, imageUrl: "/outfits/shoes-sneaker-white.png" },
         ],
       },
       sizeCharts: {
@@ -201,7 +201,7 @@ async function main() {
       categoryId: catAccessory.id,
       variants: {
         create: [
-          { sku: "CAP-BLK-OS", color: "Đen Vintage", size: "FreeSize", stockQuantity: 30, imageUrl: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=500" },
+          { sku: "CAP-BLK-OS", color: "Đen Vintage", size: "FreeSize", stockQuantity: 30, imageUrl: "/outfits/cap-black.png" },
         ],
       },
     },
@@ -218,13 +218,39 @@ async function main() {
       categoryId: catAccessory.id,
       variants: {
         create: [
-          { sku: "GLS-BLK-OS", color: "Đen", size: "FreeSize", stockQuantity: 25, imageUrl: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500" },
+          { sku: "GLS-BLK-OS", color: "Đen", size: "FreeSize", stockQuantity: 25, imageUrl: "/outfits/sunglasses-black.png" },
         ],
       },
     },
   });
 
   console.log("✅ Đã tạo đầy đủ các sản phẩm: Áo thun, Quần jean, Áo blazer, Giày sneaker, Mũ và Kính mát.");
+
+  // Cập nhật URL ảnh PNG trang phục trong suốt cho toàn bộ biến thể hiện có
+  const variantImageUpdates = [
+    { sku: "TEE-BLK-S", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-BLK-M", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-BLK-L", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-WHT-M", imageUrl: "/outfits/tshirt-white.png" },
+    { sku: "JEA-BLU-M", imageUrl: "/outfits/pants-jean-blue.png" },
+    { sku: "JEA-BLU-L", imageUrl: "/outfits/pants-jean-blue.png" },
+    { sku: "JEA-BLK-M", imageUrl: "/outfits/pants-jean-black.png" },
+    { sku: "AO-BLAZER-DEN-L", imageUrl: "/outfits/jacket-blazer.png" },
+    { sku: "AO-BLAZER-DEN-M", imageUrl: "/outfits/jacket-blazer.png" },
+    { sku: "SNK-WHT-41", imageUrl: "/outfits/shoes-sneaker-white.png" },
+    { sku: "SNK-WHT-42", imageUrl: "/outfits/shoes-sneaker-white.png" },
+    { sku: "CAP-BLK-OS", imageUrl: "/outfits/cap-black.png" },
+    { sku: "GLS-BLK-OS", imageUrl: "/outfits/sunglasses-black.png" },
+  ];
+
+  for (const item of variantImageUpdates) {
+    await prisma.productVariant.updateMany({
+      where: { sku: item.sku },
+      data: { imageUrl: item.imageUrl },
+    });
+  }
+  console.log("✅ Đã cập nhật ảnh PNG trong suốt cho toàn bộ SKU trang phục.");
+
 
   // 4. Tạo Lookbook Outfits mẫu phối sẵn
   const variantBlazer = await prisma.productVariant.findFirst({ where: { sku: "AO-BLAZER-DEN-L" } });

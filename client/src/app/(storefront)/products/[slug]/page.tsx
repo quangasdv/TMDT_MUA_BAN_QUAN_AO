@@ -228,7 +228,7 @@ export default function ProductDetailPage() {
                   <img
                     src={img}
                     alt={`${product.name} thumbnail ${idx + 1}`}
-                    className="h-full w-full object-cover object-center"
+                    className="max-h-full max-w-full object-contain object-center p-1"
                     loading="lazy"
                   />
                 </button>
@@ -243,7 +243,7 @@ export default function ProductDetailPage() {
                 src={activeImage}
                 alt={product.name}
                 onError={() => setImageError(true)}
-                className="h-full w-full object-cover object-center transition-all duration-500"
+                className="max-h-full max-w-full object-contain object-center transition-all duration-500 p-4"
               />
             ) : (
               <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground space-y-3">
