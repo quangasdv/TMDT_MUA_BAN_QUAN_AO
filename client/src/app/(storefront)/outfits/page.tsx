@@ -29,6 +29,9 @@ import {
   X,
   PackageOpen,
   Info,
+  User,
+  LayoutGrid,
+  Eye,
 } from "lucide-react";
 import "./style/outfits.css";
 
@@ -64,6 +67,7 @@ export default function OutfitsPage() {
   } = useOutfits();
 
   const [selectedVariants, setSelectedVariants] = useState<Record<string, SlotProductVariant>>({});
+  const [viewMode, setViewMode] = useState<"mannequin" | "flatlay">("mannequin");
 
   const handleSelectProduct = (slot: OutfitSlotType, prod: SlotProduct) => {
     const variant = selectedVariants[prod.id] || prod.variants[0];
@@ -72,7 +76,12 @@ export default function OutfitsPage() {
     }
   };
 
-  const handleVariantChange = (prodId: string, variant: SlotProductVariant, slot: OutfitSlotType, prod: SlotProduct) => {
+  const handleVariantChange = (
+    prodId: string,
+    variant: SlotProductVariant,
+    slot: OutfitSlotType,
+    prod: SlotProduct
+  ) => {
     setSelectedVariants((prev) => ({ ...prev, [prodId]: variant }));
     selectItemForSlot(slot, prod, variant);
   };
@@ -119,6 +128,9 @@ export default function OutfitsPage() {
   }
 
   const activeSlotProducts = slots[activeSlot] || [];
+  const hasOuterwear = !!canvasItems.OUTERWEAR;
+  const hasTop = !!canvasItems.TOP;
+  const isLayeringActive = hasOuterwear && hasTop;
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -137,11 +149,11 @@ export default function OutfitsPage() {
           <div className="flex items-center gap-2 mb-1">
             <Layers size={22} className="text-primary" />
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-              Phòng phối đồ 2D (Outfit Canvas)
+              Phòng phối đồ 2D (Interactive Outfit Studio)
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Tự do sáng tạo phong cách đường phố cá tính qua 5 tầng trang phục tương tác thời gian thực.
+            Trực quan hóa phong cách thời trang, mix &amp; match trang phục theo từng tầng layer chân thực.
           </p>
         </div>
 
@@ -160,129 +172,481 @@ export default function OutfitsPage() {
 
       {/* 3. Main 2D Canvas & Slot Selector Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-        {/* LEFT COLUMN: Interactive 2D Visual Canvas */}
+        {/* LEFT COLUMN: Interactive Visual Studio Canvas & Layer Slots */}
         <div className="lg:col-span-7">
-          <div className="outfit-canvas-container rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm">
+          <div className="outfit-canvas-container rounded-3xl p-5 sm:p-7 flex flex-col justify-between shadow-sm">
             {/* Header info inside canvas */}
-            <div className="flex items-center justify-between pb-4 border-b border-border/50">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Interactive Studio Canvas
+                  Visual Outfit Studio
                 </span>
+                <Badge variant="secondary" className="text-[11px] font-semibold bg-background/80 backdrop-blur-sm ml-1">
+                  Đã phối {selectedSlotCount}/5 món
+                </Badge>
               </div>
-              <Badge variant="secondary" className="text-[11px] font-semibold bg-background/80 backdrop-blur-sm">
-                Đã phối {selectedSlotCount}/5 món
-              </Badge>
+
+              {/* View Mode Toggle: Mannequin vs Flat-lay */}
+              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("mannequin")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    viewMode === "mannequin"
+                      ? "bg-background text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Chế độ Ma-nơ-canh 2D (Xếp chồng từng tầng)"
+                >
+                  <User size={13} />
+                  <span>Ma-nơ-canh 2D</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("flatlay")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                    viewMode === "flatlay"
+                      ? "bg-background text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Chế độ Xếp đồ trải sàn Lookbook (Flat-lay)"
+                >
+                  <LayoutGrid size={13} />
+                  <span>Xếp đồ Flat-lay</span>
+                </button>
+              </div>
             </div>
 
-            {/* Vertical Visual Mannequin Layered Slots */}
-            <div className="flex flex-col items-center justify-center gap-4 py-8 max-w-md mx-auto w-full">
-              {ALL_SLOTS.map((slotKey) => {
-                const item = canvasItems[slotKey];
-                const meta = outfitSlotNames[slotKey];
-                const SlotIcon = SLOT_ICONS[slotKey];
-                const isActive = activeSlot === slotKey;
+            {/* Smart Layering Insight Alert */}
+            {isLayeringActive && (
+              <div className="mt-4 p-2.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-primary font-semibold">
+                  <Sparkles size={14} className="shrink-0" />
+                  <span>
+                    Layering chuẩn: Áo khoác ngoài ({canvasItems.OUTERWEAR?.product.name}) phủ bên ngoài Áo lót trong ({canvasItems.TOP?.product.name})
+                  </span>
+                </div>
+                <Badge variant="outline" className="text-[10px] bg-background/80 text-primary border-primary/30">
+                  Z-Index Layered
+                </Badge>
+              </div>
+            )}
 
-                return (
-                  <div
-                    key={slotKey}
-                    onClick={() => setActiveSlot(slotKey)}
-                    className={cn(
-                      "canvas-slot-box w-full rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-4 cursor-pointer relative bg-background/90 backdrop-blur-sm",
-                      isActive ? "is-active ring-2 ring-primary" : "hover:border-foreground/40",
-                      item ? "border-solid bg-background" : "border-dashed"
-                    )}
-                  >
-                    {/* Left: Slot label & Icon */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={cn(
-                          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
-                          isActive
-                            ? "bg-foreground text-background"
-                            : item
-                            ? "bg-muted text-foreground"
-                            : "bg-muted/40 text-muted-foreground"
-                        )}
+            {/* Main Stage: Side-by-side Visual Canvas + Layer Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 my-6 items-center">
+              {/* 1. VISUAL STAGE (Mannequin or Flat-lay) */}
+              <div className="md:col-span-6 flex flex-col items-center justify-center">
+                {viewMode === "mannequin" ? (
+                  /* MANNEQUIN 2D STAGE */
+                  <div className="mannequin-stage relative w-full max-w-[270px] h-[490px] rounded-2xl overflow-hidden flex flex-col items-center justify-between p-3 select-none">
+                    <div className="studio-spotlight absolute inset-0 pointer-events-none" />
+
+                    {/* Minimalist Mannequin Silhouette Line Art */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
+                      <svg
+                        viewBox="0 0 160 400"
+                        className="w-full h-full stroke-foreground fill-none"
+                        strokeWidth="1.5"
+                        strokeDasharray="3 3"
                       >
-                        <SlotIcon size={18} />
-                      </div>
-
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                          {meta.label}
-                        </span>
-
-                        {item ? (
-                          <div className="truncate">
-                            <p className="text-xs sm:text-sm font-bold text-foreground truncate">
-                              {item.product.name}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {item.variant.color} · Size {item.variant.size} ·{" "}
-                              <strong className="text-foreground font-semibold">
-                                {formatPrice(
-                                  (Number(item.product.basePrice) || 0) +
-                                    (Number(item.variant.priceAdjustment) || 0)
-                                )}
-                              </strong>
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/80 italic">
-                            Chưa chọn món ({meta.hint})
-                          </p>
-                        )}
-                      </div>
+                        {/* Head */}
+                        <circle cx="80" cy="35" r="16" />
+                        {/* Neck */}
+                        <path d="M 74 51 L 74 65 M 86 51 L 86 65" />
+                        {/* Torso & Shoulders */}
+                        <path d="M 45 75 Q 80 65 115 75 L 105 170 Q 80 178 55 170 Z" />
+                        {/* Waist/Hips */}
+                        <path d="M 55 170 Q 80 182 105 170 L 110 210 Q 80 220 50 210 Z" />
+                        {/* Legs */}
+                        <path d="M 58 215 L 62 360 M 102 215 L 98 360" />
+                        {/* Pedestal Stand */}
+                        <path d="M 80 360 L 80 395 M 50 395 L 110 395" strokeDasharray="none" strokeWidth="2" />
+                      </svg>
                     </div>
 
-                    {/* Right: Item Thumbnail or Add Trigger */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {item ? (
-                        <>
-                          <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-muted/20 border border-border shrink-0">
-                            {item.variant.imageUrl ? (
-                              <img
-                                src={item.variant.imageUrl}
-                                alt={item.product.name}
-                                className="canvas-item-img h-full w-full object-cover object-center"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center">
-                                <PackageOpen size={16} className="text-muted-foreground" />
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              clearSlot(slotKey);
-                            }}
-                            className="p-1 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
-                            title="Bỏ chọn món này"
-                            aria-label={`Bỏ chọn ${meta.label}`}
-                          >
-                            <X size={16} />
-                          </button>
-                        </>
+                    {/* LAYER 5: ACCESSORY (Top / Head) - z-index: 40 */}
+                    <div
+                      onClick={() => setActiveSlot("ACCESSORY")}
+                      className={cn(
+                        "relative z-40 w-24 h-16 rounded-xl flex items-center justify-center transition-all cursor-pointer",
+                        canvasItems.ACCESSORY
+                          ? "layer-item"
+                          : activeSlot === "ACCESSORY"
+                          ? "border border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border border-dashed border-border/80 hover:border-foreground/50 bg-background/40"
+                      )}
+                      title="Tầng 1: Mũ & Phụ kiện"
+                    >
+                      {canvasItems.ACCESSORY ? (
+                        <img
+                          src={canvasItems.ACCESSORY.variant.imageUrl}
+                          alt={canvasItems.ACCESSORY.product.name}
+                          className="h-full w-full object-contain p-1"
+                        />
                       ) : (
-                        <span className="text-xs font-semibold text-primary underline underline-offset-2">
-                          Chọn món +
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                          <Sparkles size={11} /> + Mũ / Kính
                         </span>
                       )}
                     </div>
+
+                    {/* TORSO CONTAINER: OUTERWEAR & TOP OVERLAPPING */}
+                    <div className="relative w-full h-44 flex items-center justify-center">
+                      {/* LAYER 2: TOP (Inside shirt) - z-index: 20 */}
+                      <div
+                        onClick={() => setActiveSlot("TOP")}
+                        className={cn(
+                          "absolute z-20 w-36 h-36 rounded-2xl flex items-center justify-center transition-all cursor-pointer overflow-hidden",
+                          canvasItems.TOP
+                            ? "layer-item layer-top"
+                            : activeSlot === "TOP"
+                            ? "border border-primary bg-primary/10 ring-1 ring-primary"
+                            : "border border-dashed border-border/80 hover:border-foreground/50 bg-background/40"
+                        )}
+                        style={{
+                          transform: canvasItems.OUTERWEAR ? "scale(0.88)" : "scale(1)",
+                        }}
+                        title="Tầng 2: Áo trong (Top)"
+                      >
+                        {canvasItems.TOP ? (
+                          <img
+                            src={canvasItems.TOP.variant.imageUrl}
+                            alt={canvasItems.TOP.product.name}
+                            className="h-full w-full object-contain p-1"
+                          />
+                        ) : (
+                          <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                            <Shirt size={12} /> + Áo trong
+                          </span>
+                        )}
+                      </div>
+
+                      {/* LAYER 3: OUTERWEAR (Jacket outside) - z-index: 30 */}
+                      {canvasItems.OUTERWEAR ? (
+                        <div
+                          onClick={() => setActiveSlot("OUTERWEAR")}
+                          className="absolute z-30 w-44 h-44 flex items-center justify-center transition-all cursor-pointer pointer-events-auto"
+                          title="Tầng 3: Áo khoác ngoài (Outerwear - Phủ bên ngoài)"
+                        >
+                          <img
+                            src={canvasItems.OUTERWEAR.variant.imageUrl}
+                            alt={canvasItems.OUTERWEAR.product.name}
+                            className="layer-item layer-outerwear h-full w-full object-contain p-1"
+                            style={{
+                              opacity: canvasItems.TOP ? 0.94 : 1,
+                            }}
+                          />
+                          <Badge
+                            variant="secondary"
+                            className="absolute -top-1 -right-1 text-[9px] px-1 py-0 bg-background/90 shadow-xs border"
+                          >
+                            Áo khoác
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => setActiveSlot("OUTERWEAR")}
+                          className={cn(
+                            "absolute z-10 w-44 h-44 rounded-2xl flex items-center justify-center transition-all cursor-pointer border border-dashed",
+                            activeSlot === "OUTERWEAR"
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-border/60 hover:border-foreground/40"
+                          )}
+                          title="Tầng 3: Áo khoác ngoài"
+                        >
+                          <span className="text-[10px] font-bold text-muted-foreground/70 flex items-center gap-1 absolute top-1 left-2">
+                            <Layers size={11} /> + Áo khoác
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* LAYER 1: BOTTOM (Quần/Váy) - z-index: 15 */}
+                    <div
+                      onClick={() => setActiveSlot("BOTTOM")}
+                      className={cn(
+                        "relative z-15 w-32 h-44 rounded-2xl flex items-center justify-center transition-all cursor-pointer overflow-hidden mt-1",
+                        canvasItems.BOTTOM
+                          ? "layer-item layer-bottom"
+                          : activeSlot === "BOTTOM"
+                          ? "border border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border border-dashed border-border/80 hover:border-foreground/50 bg-background/40"
+                      )}
+                      title="Tầng 4: Quần hoặc Váy"
+                    >
+                      {canvasItems.BOTTOM ? (
+                        <img
+                          src={canvasItems.BOTTOM.variant.imageUrl}
+                          alt={canvasItems.BOTTOM.product.name}
+                          className="h-full w-full object-contain p-1"
+                        />
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                          <Scissors size={12} /> + Quần / Váy
+                        </span>
+                      )}
+                    </div>
+
+                    {/* LAYER 4: SHOES (Giày dép) - z-index: 10 */}
+                    <div
+                      onClick={() => setActiveSlot("SHOES")}
+                      className={cn(
+                        "relative z-10 w-28 h-16 rounded-xl flex items-center justify-center transition-all cursor-pointer overflow-hidden mt-1",
+                        canvasItems.SHOES
+                          ? "layer-item layer-shoes"
+                          : activeSlot === "SHOES"
+                          ? "border border-primary bg-primary/10 ring-1 ring-primary"
+                          : "border border-dashed border-border/80 hover:border-foreground/50 bg-background/40"
+                      )}
+                      title="Tầng 5: Giày sneaker / boots"
+                    >
+                      {canvasItems.SHOES ? (
+                        <img
+                          src={canvasItems.SHOES.variant.imageUrl}
+                          alt={canvasItems.SHOES.product.name}
+                          className="h-full w-full object-contain p-1"
+                        />
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                          <Footprints size={12} /> + Giày dép
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Canvas Stage Watermark */}
+                    <span className="absolute bottom-1 right-2 text-[8px] font-mono uppercase tracking-widest text-muted-foreground/50">
+                      TrendyFit Studio 2D
+                    </span>
                   </div>
-                );
-              })}
+                ) : (
+                  /* FLAT-LAY EDITORIAL LOOKBOOK STAGE */
+                  <div className="mannequin-stage relative w-full max-w-[270px] h-[490px] rounded-2xl overflow-y-auto p-4 flex flex-col justify-start gap-3 select-none">
+                    <div className="flex items-center justify-between pb-2 border-b border-border/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span>Flat-lay Collage</span>
+                      <Eye size={12} />
+                    </div>
+
+                    {selectedSlotCount > 0 ? (
+                      <div className="space-y-3">
+                        {/* Top / Outerwear combo banner */}
+                        {canvasItems.OUTERWEAR && (
+                          <div
+                            onClick={() => setActiveSlot("OUTERWEAR")}
+                            className="bg-card rounded-xl p-2 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors"
+                          >
+                            <img
+                              src={canvasItems.OUTERWEAR.variant.imageUrl}
+                              alt=""
+                              className="h-16 w-16 object-cover rounded-lg shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <Badge variant="outline" className="text-[9px] mb-0.5">Áo khoác ngoài</Badge>
+                              <p className="text-xs font-bold truncate">{canvasItems.OUTERWEAR.product.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{canvasItems.OUTERWEAR.variant.color}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {canvasItems.TOP && (
+                          <div
+                            onClick={() => setActiveSlot("TOP")}
+                            className="bg-card rounded-xl p-2 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors"
+                          >
+                            <img
+                              src={canvasItems.TOP.variant.imageUrl}
+                              alt=""
+                              className="h-16 w-16 object-cover rounded-lg shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <Badge variant="outline" className="text-[9px] mb-0.5">Áo trong</Badge>
+                              <p className="text-xs font-bold truncate">{canvasItems.TOP.product.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{canvasItems.TOP.variant.color}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {canvasItems.BOTTOM && (
+                          <div
+                            onClick={() => setActiveSlot("BOTTOM")}
+                            className="bg-card rounded-xl p-2 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors"
+                          >
+                            <img
+                              src={canvasItems.BOTTOM.variant.imageUrl}
+                              alt=""
+                              className="h-16 w-16 object-cover rounded-lg shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <Badge variant="outline" className="text-[9px] mb-0.5">Quần / Váy</Badge>
+                              <p className="text-xs font-bold truncate">{canvasItems.BOTTOM.product.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{canvasItems.BOTTOM.variant.color}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {canvasItems.SHOES && (
+                          <div
+                            onClick={() => setActiveSlot("SHOES")}
+                            className="bg-card rounded-xl p-2 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors"
+                          >
+                            <img
+                              src={canvasItems.SHOES.variant.imageUrl}
+                              alt=""
+                              className="h-14 w-14 object-cover rounded-lg shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <Badge variant="outline" className="text-[9px] mb-0.5">Giày dép</Badge>
+                              <p className="text-xs font-bold truncate">{canvasItems.SHOES.product.name}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {canvasItems.ACCESSORY && (
+                          <div
+                            onClick={() => setActiveSlot("ACCESSORY")}
+                            className="bg-card rounded-xl p-2 border border-border flex items-center gap-3 cursor-pointer hover:border-primary transition-colors"
+                          >
+                            <img
+                              src={canvasItems.ACCESSORY.variant.imageUrl}
+                              alt=""
+                              className="h-12 w-12 object-cover rounded-lg shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <Badge variant="outline" className="text-[9px] mb-0.5">Phụ kiện</Badge>
+                              <p className="text-xs font-bold truncate">{canvasItems.ACCESSORY.product.name}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-4 text-muted-foreground space-y-2">
+                        <PackageOpen size={36} className="opacity-30" />
+                        <p className="text-xs font-semibold">Chưa có món nào được chọn</p>
+                        <p className="text-[11px] text-muted-foreground/80">
+                          Hãy chọn Áo và Quần ở danh sách để chiêm ngưỡng trọn bộ set đồ!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <span className="text-[11px] text-muted-foreground mt-2 italic flex items-center gap-1">
+                  <Info size={11} /> Nhấp vào từng món trên Canvas để chuyển đổi tầng
+                </span>
+              </div>
+
+              {/* 2. COMPACT LAYER SELECTOR CARDS */}
+              <div className="md:col-span-6 flex flex-col gap-2.5 w-full">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
+                  Danh sách tầng đồ phối:
+                </span>
+                {ALL_SLOTS.map((slotKey) => {
+                  const item = canvasItems[slotKey];
+                  const meta = outfitSlotNames[slotKey];
+                  const SlotIcon = SLOT_ICONS[slotKey];
+                  const isActive = activeSlot === slotKey;
+
+                  return (
+                    <div
+                      key={slotKey}
+                      onClick={() => setActiveSlot(slotKey)}
+                      className={cn(
+                        "canvas-slot-box w-full rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 cursor-pointer relative bg-background/90 backdrop-blur-sm",
+                        isActive ? "is-active ring-2 ring-primary" : "hover:border-foreground/40",
+                        item ? "border-solid bg-background shadow-2xs" : "border-dashed"
+                      )}
+                    >
+                      {/* Left: Slot label & Icon */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={cn(
+                            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                            isActive
+                              ? "bg-foreground text-background"
+                              : item
+                              ? "bg-muted text-foreground"
+                              : "bg-muted/40 text-muted-foreground"
+                          )}
+                        >
+                          <SlotIcon size={15} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block leading-tight">
+                            {meta.label}
+                          </span>
+
+                          {item ? (
+                            <div className="truncate">
+                              <p className="text-xs font-bold text-foreground truncate">
+                                {item.product.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground leading-tight">
+                                {item.variant.color} · Size {item.variant.size} ·{" "}
+                                <strong className="text-foreground font-semibold">
+                                  {formatPrice(
+                                    (Number(item.product.basePrice) || 0) +
+                                      (Number(item.variant.priceAdjustment) || 0)
+                                  )}
+                                </strong>
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground/80 italic leading-tight">
+                              Chưa chọn ({meta.hint})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Item Thumbnail or Add Trigger */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item ? (
+                          <>
+                            <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-muted/20 border border-border shrink-0">
+                              {item.variant.imageUrl ? (
+                                <img
+                                  src={item.variant.imageUrl}
+                                  alt={item.product.name}
+                                  className="canvas-item-img h-full w-full object-cover object-center"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center">
+                                  <PackageOpen size={14} className="text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearSlot(slotKey);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-destructive rounded-md hover:bg-destructive/10 transition-colors cursor-pointer"
+                              title="Bỏ chọn món này"
+                              aria-label={`Bỏ chọn ${meta.label}`}
+                            >
+                              <X size={15} />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-primary underline underline-offset-2">
+                            Chọn +
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Bottom canvas hint */}
-            <div className="pt-4 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+            <div className="pt-4 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Info size={13} />
-                Nhấp trực tiếp vào từng tầng để mở danh sách đồ tương ứng.
+                Nhấp vào từng tầng trên Ma-nơ-canh hoặc danh sách để đổi đồ tương ứng.
               </span>
               <span className="font-semibold text-foreground">
                 Tổng set: {formatPrice(totalPrice)}
@@ -344,7 +708,7 @@ export default function OutfitsPage() {
                 <button
                   type="button"
                   onClick={() => clearSlot(activeSlot)}
-                  className="text-xs text-destructive hover:underline font-semibold"
+                  className="text-xs text-destructive hover:underline font-semibold cursor-pointer"
                 >
                   Gỡ món đang chọn
                 </button>
@@ -357,40 +721,34 @@ export default function OutfitsPage() {
                 {activeSlotProducts.map((prod) => {
                   const isSelected = canvasItems[activeSlot]?.product.id === prod.id;
                   const currentSelectedVariant =
-                    (isSelected ? canvasItems[activeSlot]?.variant : null) ||
-                    selectedVariants[prod.id] ||
-                    prod.variants[0];
-
-                  const prodImage =
-                    currentSelectedVariant?.imageUrl ||
-                    (prod.variants[0] ? prod.variants[0].imageUrl : "");
+                    selectedVariants[prod.id] || prod.variants[0];
 
                   return (
                     <div
                       key={prod.id}
                       className={cn(
-                        "p-3 rounded-xl border transition-all flex gap-3 items-center justify-between",
+                        "p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors",
                         isSelected
-                          ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-border bg-background hover:border-foreground/30"
+                          ? "bg-primary/5 border-primary shadow-xs"
+                          : "border-border hover:bg-muted/40"
                       )}
                     >
-                      {/* Product thumbnail */}
-                      <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-muted/30 border border-border/60 shrink-0">
-                        {prodImage ? (
+                      {/* Product Thumbnail */}
+                      <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-muted/20 border border-border shrink-0">
+                        {currentSelectedVariant?.imageUrl ? (
                           <img
-                            src={prodImage}
+                            src={currentSelectedVariant.imageUrl}
                             alt={prod.name}
                             className="h-full w-full object-cover object-center"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
-                            <PackageOpen size={18} className="text-muted-foreground" />
+                            <PackageOpen size={16} className="text-muted-foreground" />
                           </div>
                         )}
                       </div>
 
-                      {/* Info & Variants */}
+                      {/* Product Info */}
                       <div className="flex-1 min-w-0 space-y-1">
                         <Link
                           href={`/products/${prod.slug}`}
@@ -417,7 +775,7 @@ export default function OutfitsPage() {
                                   handleVariantChange(prod.id, v, activeSlot, prod)
                                 }
                                 className={cn(
-                                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+                                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer",
                                   currentSelectedVariant?.id === v.id
                                     ? "bg-foreground text-background border-foreground font-semibold"
                                     : "border-border text-muted-foreground hover:bg-muted"
