@@ -4,9 +4,9 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Bắt đầu nạp dữ liệu mẫu (Seeding Database)...");
+  console.log("🌱 Bắt đầu nạp dữ liệu mẫu hoàn chỉnh (Seeding Database)...");
 
-  // 1. Tạo tài khoản mẫu (Admin, Staff, Customer) theo Mục 5 README.md
+  // 1. Tạo tài khoản mẫu (Admin, Staff, Customer)
   const adminPassword = await bcrypt.hash("Admin@123456", 10);
   const staffPassword = await bcrypt.hash("Staff@123456", 10);
   const customerPassword = await bcrypt.hash("Customer@123456", 10);
@@ -49,7 +49,7 @@ async function main() {
 
   console.log("✅ Đã tạo tài khoản demo: Admin, Staff, Customer.");
 
-  // 2. Tạo Danh mục (Category)
+  // 2. Tạo đầy đủ 5 Danh mục sản phẩm (Top, Bottom, Outerwear, Shoes, Accessory)
   const catTop = await prisma.category.upsert({
     where: { slug: "ao-thun" },
     update: {},
@@ -65,7 +65,7 @@ async function main() {
   const catOuter = await prisma.category.upsert({
     where: { slug: "ao-khoac" },
     update: {},
-    create: { name: "Áo Khoác", slug: "ao-khoac" },
+    create: { name: "Áo Khoác & Blazer", slug: "ao-khoac" },
   });
 
   const catShoes = await prisma.category.upsert({
@@ -74,9 +74,17 @@ async function main() {
     create: { name: "Giày Sneaker", slug: "giay-sneaker" },
   });
 
-  console.log("✅ Đã tạo các danh mục sản phẩm.");
+  const catAccessory = await prisma.category.upsert({
+    where: { slug: "phu-kien" },
+    update: {},
+    create: { name: "Phụ Kiện Thời Trang", slug: "phu-kien" },
+  });
+
+  console.log("✅ Đã tạo đầy đủ 5 danh mục tương ứng 5 tầng phối đồ.");
 
   // 3. Tạo Sản phẩm & Biến thể & SizeChart
+
+  // 3.1. Áo Thun (TOP) - Dùng ảnh studio flat product cực đẹp
   const prodTee = await prisma.product.upsert({
     where: { slug: "ao-thun-trendyfit-basic" },
     update: {},
@@ -88,10 +96,10 @@ async function main() {
       categoryId: catTop.id,
       variants: {
         create: [
-          { sku: "TEE-BLK-S", color: "Đen", size: "S", stockQuantity: 20, imageUrl: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500" },
-          { sku: "TEE-BLK-M", color: "Đen", size: "M", stockQuantity: 15, imageUrl: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500" },
-          { sku: "TEE-BLK-L", color: "Đen", size: "L", stockQuantity: 10, imageUrl: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500" },
-          { sku: "TEE-WHT-M", color: "Trắng", size: "M", stockQuantity: 25, imageUrl: "https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500" },
+          { sku: "TEE-BLK-S", color: "Đen", size: "S", stockQuantity: 20, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-BLK-M", color: "Đen", size: "M", stockQuantity: 15, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-BLK-L", color: "Đen", size: "L", stockQuantity: 10, imageUrl: "/outfits/tshirt-black.png" },
+          { sku: "TEE-WHT-M", color: "Trắng", size: "M", stockQuantity: 25, imageUrl: "/outfits/tshirt-white.png" },
         ],
       },
       sizeCharts: {
@@ -105,6 +113,7 @@ async function main() {
     },
   });
 
+  // 3.2. Quần Jean (BOTTOM) - Dùng ảnh denim flat studio
   const prodJean = await prisma.product.upsert({
     where: { slug: "quan-jean-wide-leg" },
     update: {},
@@ -116,8 +125,9 @@ async function main() {
       categoryId: catBottom.id,
       variants: {
         create: [
-          { sku: "JEA-BLU-M", color: "Xanh Wash", size: "M", stockQuantity: 15, imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500" },
-          { sku: "JEA-BLU-L", color: "Xanh Wash", size: "L", stockQuantity: 8, imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500" },
+          { sku: "JEA-BLU-M", color: "Xanh Wash", size: "M", stockQuantity: 15, imageUrl: "/outfits/pants-jean-blue.png" },
+          { sku: "JEA-BLU-L", color: "Xanh Wash", size: "L", stockQuantity: 8, imageUrl: "/outfits/pants-jean-blue.png" },
+          { sku: "JEA-BLK-M", color: "Đen Khói", size: "M", stockQuantity: 12, imageUrl: "/outfits/pants-jean-black.png" },
         ],
       },
       sizeCharts: {
@@ -129,9 +139,172 @@ async function main() {
     },
   });
 
-  console.log("✅ Đã tạo các sản phẩm, biến thể và bảng SizeChart phục vụ Smart Fit Advisor.");
+  // 3.3. Áo Khoác (OUTERWEAR) - Chuẩn mã AO-BLAZER-DEN-L phục vụ TC-01 & Demo
+  const prodBlazer = await prisma.product.upsert({
+    where: { slug: "ao-blazer-oversize-trendyfit" },
+    update: {},
+    create: {
+      name: "Áo Blazer Form Rộng Streetwear TrendyFit",
+      slug: "ao-blazer-oversize-trendyfit",
+      description: "Thiết kế blazer 2 nút phom rộng phong cách Hàn Quốc, đệm vai tinh tế, chất vải tuyết mưa cao cấp.",
+      basePrice: 590000,
+      categoryId: catOuter.id,
+      variants: {
+        create: [
+          { sku: "AO-BLAZER-DEN-L", color: "Đen", size: "L", stockQuantity: 1, imageUrl: "/outfits/jacket-blazer.png" },
+          { sku: "AO-BLAZER-DEN-M", color: "Đen", size: "M", stockQuantity: 5, imageUrl: "/outfits/jacket-blazer.png" },
+        ],
+      },
+      sizeCharts: {
+        create: [
+          { size: "M", minHeightCm: 165, maxHeightCm: 175, minWeightKg: 55, maxWeightKg: 68, chestCm: 104, waistCm: 84 },
+          { size: "L", minHeightCm: 172, maxHeightCm: 185, minWeightKg: 68, maxWeightKg: 82, chestCm: 112, waistCm: 90 },
+        ],
+      },
+    },
+  });
 
-  // 4. Tạo Voucher
+  // 3.4. Giày Sneaker (SHOES)
+  const prodSneaker = await prisma.product.upsert({
+    where: { slug: "giay-sneaker-chunky-street" },
+    update: {},
+    create: {
+      name: "Giày Sneaker Cổ Thấp TrendyFit Chunky Street",
+      slug: "giay-sneaker-chunky-street",
+      description: "Đế cao su lưu hóa êm ái tôn dáng 4cm, chất da PU vi sợi chống nhăn, phong cách thể thao đường phố.",
+      basePrice: 650000,
+      categoryId: catShoes.id,
+      variants: {
+        create: [
+          { sku: "SNK-WHT-41", color: "Trắng", size: "41", stockQuantity: 10, imageUrl: "/outfits/shoes-sneaker-white.png" },
+          { sku: "SNK-WHT-42", color: "Trắng", size: "42", stockQuantity: 12, imageUrl: "/outfits/shoes-sneaker-white.png" },
+        ],
+      },
+      sizeCharts: {
+        create: [
+          { size: "41", minHeightCm: 165, maxHeightCm: 175, minWeightKg: 55, maxWeightKg: 75 },
+          { size: "42", minHeightCm: 170, maxHeightCm: 185, minWeightKg: 60, maxWeightKg: 85 },
+        ],
+      },
+    },
+  });
+
+  // 3.5. Phụ Kiện (ACCESSORY) - Mũ Lưỡi Trai & Kính Mát
+  const prodCap = await prisma.product.upsert({
+    where: { slug: "mu-luoi-trai-washed-vintage" },
+    update: {},
+    create: {
+      name: "Mũ Lưỡi Trai TrendyFit Washed Vintage",
+      slug: "mu-luoi-trai-washed-vintage",
+      description: "Vải kaki 100% cotton xử lý wash bạc màu phong cách vintage, khóa kim loại cao cấp tùy chỉnh kích cỡ.",
+      basePrice: 149000,
+      categoryId: catAccessory.id,
+      variants: {
+        create: [
+          { sku: "CAP-BLK-OS", color: "Đen Vintage", size: "FreeSize", stockQuantity: 30, imageUrl: "/outfits/cap-black.png" },
+        ],
+      },
+    },
+  });
+
+  const prodGlasses = await prisma.product.upsert({
+    where: { slug: "kinh-mat-retro-rectangle" },
+    update: {},
+    create: {
+      name: "Kính Mát Chữ Nhật Retro Black Sunglasses",
+      slug: "kinh-mat-retro-rectangle",
+      description: "Gọng kính acetate đen bóng phom chữ nhật cá tính, tròng chống tia UV400 bảo vệ mắt tối đa.",
+      basePrice: 189000,
+      categoryId: catAccessory.id,
+      variants: {
+        create: [
+          { sku: "GLS-BLK-OS", color: "Đen", size: "FreeSize", stockQuantity: 25, imageUrl: "/outfits/sunglasses-black.png" },
+        ],
+      },
+    },
+  });
+
+  console.log("✅ Đã tạo đầy đủ các sản phẩm: Áo thun, Quần jean, Áo blazer, Giày sneaker, Mũ và Kính mát.");
+
+  // Cập nhật URL ảnh PNG trang phục trong suốt cho toàn bộ biến thể hiện có
+  const variantImageUpdates = [
+    { sku: "TEE-BLK-S", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-BLK-M", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-BLK-L", imageUrl: "/outfits/tshirt-black.png" },
+    { sku: "TEE-WHT-M", imageUrl: "/outfits/tshirt-white.png" },
+    { sku: "JEA-BLU-M", imageUrl: "/outfits/pants-jean-blue.png" },
+    { sku: "JEA-BLU-L", imageUrl: "/outfits/pants-jean-blue.png" },
+    { sku: "JEA-BLK-M", imageUrl: "/outfits/pants-jean-black.png" },
+    { sku: "AO-BLAZER-DEN-L", imageUrl: "/outfits/jacket-blazer.png" },
+    { sku: "AO-BLAZER-DEN-M", imageUrl: "/outfits/jacket-blazer.png" },
+    { sku: "SNK-WHT-41", imageUrl: "/outfits/shoes-sneaker-white.png" },
+    { sku: "SNK-WHT-42", imageUrl: "/outfits/shoes-sneaker-white.png" },
+    { sku: "CAP-BLK-OS", imageUrl: "/outfits/cap-black.png" },
+    { sku: "GLS-BLK-OS", imageUrl: "/outfits/sunglasses-black.png" },
+  ];
+
+  for (const item of variantImageUpdates) {
+    await prisma.productVariant.updateMany({
+      where: { sku: item.sku },
+      data: { imageUrl: item.imageUrl },
+    });
+  }
+  console.log("✅ Đã cập nhật ảnh PNG trong suốt cho toàn bộ SKU trang phục.");
+
+
+  // 4. Tạo Lookbook Outfits mẫu phối sẵn
+  const variantBlazer = await prisma.productVariant.findFirst({ where: { sku: "AO-BLAZER-DEN-L" } });
+  const variantTee = await prisma.productVariant.findFirst({ where: { sku: "TEE-BLK-M" } });
+  const variantJean = await prisma.productVariant.findFirst({ where: { sku: "JEA-BLU-M" } });
+  const variantSneaker = await prisma.productVariant.findFirst({ where: { sku: "SNK-WHT-41" } });
+  const variantCap = await prisma.productVariant.findFirst({ where: { sku: "CAP-BLK-OS" } });
+
+  // Xóa outfit cũ nếu có để seed mới sạch sẽ
+  await prisma.outfitItem.deleteMany({});
+  await prisma.outfit.deleteMany({});
+
+  if (variantBlazer && variantTee && variantJean && variantSneaker) {
+    const outfit1 = await prisma.outfit.create({
+      data: {
+        title: "Streetwear All-Black Layering",
+        description: "Set đồ phong cách đường phố phối layer thời thượng giữa áo Blazer rộng, Áo thun cotton và Quần jean suông.",
+        bannerUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800",
+        discountRate: 0.15,
+        isActive: true,
+        items: {
+          create: [
+            { variantId: variantBlazer.id, slotType: "OUTERWEAR" },
+            { variantId: variantTee.id, slotType: "TOP" },
+            { variantId: variantJean.id, slotType: "BOTTOM" },
+            { variantId: variantSneaker.id, slotType: "SHOES" },
+          ],
+        },
+      },
+    });
+
+    if (variantCap) {
+      const outfit2 = await prisma.outfit.create({
+        data: {
+          title: "Retro Casual Daily Weekend",
+          description: "Phong cách năng động trẻ trung dạo phố cuối tuần kết hợp Mũ lưỡi trai, Áo thun basic và Quần denim retro.",
+          bannerUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800",
+          discountRate: 0.10,
+          isActive: true,
+          items: {
+            create: [
+              { variantId: variantCap.id, slotType: "ACCESSORY" },
+              { variantId: variantTee.id, slotType: "TOP" },
+              { variantId: variantJean.id, slotType: "BOTTOM" },
+              { variantId: variantSneaker.id, slotType: "SHOES" },
+            ],
+          },
+        },
+      });
+    }
+    console.log("✅ Đã tạo các bộ phối mẫu Lookbook Presets (giảm combo 10% - 15%).");
+  }
+
+  // 5. Tạo Voucher
   await prisma.voucher.upsert({
     where: { code: "WELCOME2026" },
     update: {},

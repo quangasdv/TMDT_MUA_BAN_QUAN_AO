@@ -92,6 +92,57 @@ export interface CategoriesResponse {
   };
 }
 
+// ==========================================
+// 1. DÀNH CHO TÌM KIẾM THEO TỪ KHÓA (SEARCH)
+// ==========================================
+export interface SearchProductsParams {
+  q?: string;
+  page?: number | string;
+  limit?: number | string;
+}
+
+export interface SearchProductsResponse {
+  success: boolean;
+  data: {
+    keyword: string;
+    products: Product[];
+    pagination: Pagination;
+  };
+}
+
+// ==========================================
+// 2. DÀNH CHO BỘ LỌC TỔNG HỢP (FILTER)
+// ==========================================
+export interface FilterProductsParams {
+  category?: string;
+  categoryId?: string;
+  minPrice?: number | string;
+  maxPrice?: number | string;
+  color?: string;
+  size?: string;
+  inStock?: boolean | string;
+  sortBy?: "price_asc" | "price_desc" | "name_asc" | "newest";
+  page?: number | string;
+  limit?: number | string;
+}
+
+export interface FilterProductsResponse {
+  success: boolean;
+  data: {
+    filtersApplied: {
+      category: string | null;
+      minPrice: number | null;
+      maxPrice: number | null;
+      color: string | null;
+      size: string | null;
+      inStock: boolean;
+      sortBy: string;
+    };
+    products: Product[];
+    pagination: Pagination;
+  };
+}
+
 /**
  * Lấy danh sách danh mục sản phẩm phân cấp
  * GET /api/categories
@@ -102,17 +153,15 @@ export const getCategoriesApi = async (): Promise<CategoriesResponse> => {
 };
 
 /**
- * Lấy danh sách sản phẩm có tìm kiếm, lọc và phân trang
+ * Lấy danh sách sản phẩm chung (Hỗ trợ cả search & filter qua params)
  * GET /api/products
  */
 export const getProductsApi = async (
   params?: GetProductsParams
 ): Promise<ProductsResponse> => {
-  // Đồng bộ tham số category/categoryId
   const queryParams: Record<string, string | number> = {};
   if (params) {
     if (params.q) queryParams.q = params.q;
-    // Backend ưu tiên 'category' (slug) nhưng chấp nhận cả 2
     if (params.category) queryParams.category = params.category;
     else if (params.categoryId) queryParams.category = params.categoryId;
     if (params.minPrice !== undefined && params.minPrice !== "")
@@ -132,6 +181,32 @@ export const getProductsApi = async (
 };
 
 /**
+ * Endpoint chuyên biệt cho Tìm kiếm sản phẩm theo từ khóa (Keyword Search)
+ * GET /api/products/search (hoặc /api/search)
+ */
+export const searchProductsApi = async (
+  params?: SearchProductsParams
+): Promise<SearchProductsResponse> => {
+  const response = await baseAPI.get<SearchProductsResponse>("/products/search", {
+    params,
+  });
+  return response.data;
+};
+
+/**
+ * Endpoint chuyên biệt cho Bộ lọc sản phẩm tổng hợp (Filter)
+ * GET /api/products/filter (hoặc /api/filter)
+ */
+export const filterProductsApi = async (
+  params?: FilterProductsParams
+): Promise<FilterProductsResponse> => {
+  const response = await baseAPI.get<FilterProductsResponse>("/products/filter", {
+    params,
+  });
+  return response.data;
+};
+
+/**
  * Lấy chi tiết sản phẩm theo Slug kèm biến thể và Size Chart
  * GET /api/products/:slug
  */
@@ -143,4 +218,3 @@ export const getProductBySlugApi = async (
   );
   return response.data;
 };
-

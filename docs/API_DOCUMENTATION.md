@@ -177,6 +177,86 @@
 }
 ```
 
+#### `GET /api/products/search` (hoặc alias: `GET /api/search`) - Tìm kiếm sản phẩm theo từ khóa (Keyword Search)
+> **Mục đích:** Dành riêng cho ô tìm kiếm (Search Bar) trên Header hoặc trang Kết quả tìm kiếm. Tìm kiếm theo tên sản phẩm, mô tả hoặc tên danh mục (không phân biệt chữ hoa thường - ILIKE).
+* **Query Params:**
+  - `q`: Từ khóa tìm kiếm (Ví dụ: `blazer`, `áo thun`, `jean`)
+  - `page`: Trang hiện tại (mặc định: `1`)
+  - `limit`: Số lượng sản phẩm mỗi trang (mặc định: `12`)
+* **Ví dụ gọi API:**
+  - `GET /api/products/search?q=blazer`
+  - `GET /api/search?q=quan+jean&page=1&limit=10`
+* **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "keyword": "blazer",
+    "products": [
+      {
+        "id": "prod-1",
+        "name": "Áo Blazer Form Rộng Streetwear TrendyFit",
+        "slug": "ao-blazer-oversize-trendyfit",
+        "basePrice": "590000",
+        "category": { "id": "cat-1", "name": "Áo Khoác", "slug": "ao-khoac" },
+        "variants": []
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 12,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+#### `GET /api/products/filter` (hoặc alias: `GET /api/filter`) - Bộ lọc sản phẩm tổng hợp (Advanced Filter)
+> **Mục đích:** Dành riêng cho Sidebar bộ lọc ở trang Danh mục / Cửa hàng. Hỗ trợ lọc theo mọi tiêu chí (danh mục, khoảng giá, màu sắc, kích cỡ, còn hàng, sắp xếp).
+* **Query Params:**
+  - `category`: Slug danh mục (Ví dụ: `ao-thun`, `quan-jean`, `ao-khoac`)
+  - `categoryId`: ID danh mục (nếu FE dùng ID thay vì slug)
+  - `minPrice`: Giá tối thiểu (VNĐ, ví dụ: `200000`)
+  - `maxPrice`: Giá tối đa (VNĐ, ví dụ: `600000`)
+  - `color`: Màu sắc (Ví dụ: `Đen` hoặc danh sách nhiều màu phân tách bằng dấu phẩy: `Đen,Trắng,Xanh Wash`)
+  - `size`: Kích cỡ (Ví dụ: `M` hoặc danh sách nhiều size: `S,M,L,41`)
+  - `inStock`: `true` hoặc `1` (Chỉ lấy các sản phẩm có số lượng tồn kho `stockQuantity > 0`)
+  - `sortBy`: Tiêu chí sắp xếp:
+    - `newest`: Mới nhất (mặc định)
+    - `price_asc`: Giá tăng dần
+    - `price_desc`: Giá giảm dần
+    - `name_asc`: Tên A -> Z
+  - `page`: Trang hiện tại (mặc định: `1`)
+  - `limit`: Số sản phẩm mỗi trang (mặc định: `12`)
+* **Ví dụ gọi API:**
+  - `GET /api/products/filter?category=quan-jean&color=Xanh+Wash&inStock=true`
+  - `GET /api/filter?minPrice=300000&maxPrice=700000&sortBy=price_asc`
+* **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "filtersApplied": {
+      "category": "quan-jean",
+      "minPrice": null,
+      "maxPrice": null,
+      "color": "Xanh Wash",
+      "size": null,
+      "inStock": true,
+      "sortBy": "newest"
+    },
+    "products": [],
+    "pagination": {
+      "page": 1,
+      "limit": 12,
+      "total": 1,
+      "totalPages": 1
+    }
+  }
+}
+```
+
 #### `GET /api/products/:slug` - Chi tiết sản phẩm theo Slug
 * **Params:** `slug` (ví dụ: `ao-thun-basic-unisex`)
 * **Response (200 OK):**

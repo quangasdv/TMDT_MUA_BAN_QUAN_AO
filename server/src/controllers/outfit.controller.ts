@@ -50,6 +50,7 @@ export class OutfitController {
         BOTTOM: [],
         OUTERWEAR: [],
         SHOES: [],
+        ACCESSORY: [],
       };
 
       for (const cat of categories) {
@@ -58,10 +59,12 @@ export class OutfitController {
 
         if (slug.includes("quan") || slug.includes("pant") || slug.includes("bottom") || slug.includes("jean")) {
           targetSlot = "BOTTOM";
-        } else if (slug.includes("khoac") || slug.includes("jacket") || slug.includes("outerwear") || slug.includes("hoodie")) {
+        } else if (slug.includes("khoac") || slug.includes("jacket") || slug.includes("outerwear") || slug.includes("blazer") || slug.includes("hoodie")) {
           targetSlot = "OUTERWEAR";
         } else if (slug.includes("giay") || slug.includes("shoe") || slug.includes("sneaker")) {
           targetSlot = "SHOES";
+        } else if (slug.includes("phu-kien") || slug.includes("accessory") || slug.includes("non") || slug.includes("mu") || slug.includes("kinh") || slug.includes("tui")) {
+          targetSlot = "ACCESSORY";
         }
 
         for (const prod of cat.products) {

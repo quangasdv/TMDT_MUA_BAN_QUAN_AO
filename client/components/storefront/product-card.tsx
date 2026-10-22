@@ -38,12 +38,12 @@ export function ProductCard({ product }: ProductCardProps) {
       className="group flex flex-col h-full overflow-hidden rounded-xl border border-border/60 bg-card transition-all duration-300 hover:border-border hover:shadow-md"
     >
       {/* Vùng Ảnh Sản Phẩm */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted/30">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted/15 flex items-center justify-center p-3 sm:p-4">
         {!imageError ? (
           <img
             src={primaryImage}
             alt={product.name}
-            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+            className="max-h-full max-w-full object-contain object-center transition-transform duration-500 group-hover:scale-105"
             onError={() => setImageError(true)}
             loading="lazy"
           />
