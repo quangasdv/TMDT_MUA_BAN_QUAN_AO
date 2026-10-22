@@ -358,7 +358,7 @@ function ProductsCatalogContent() {
 
         {/* MOBILE DRAWER FILTER */}
         {mobileFilterOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+          <div className="lg:hidden fixed inset-0 z-50 bg-slate-900/25 dark:bg-black/40 backdrop-blur-md flex justify-end">
             <div className="w-full max-w-xs bg-background h-full p-6 overflow-y-auto space-y-6 shadow-2xl animate-in slide-in-from-right duration-200">
               <div className="flex items-center justify-between border-b pb-4">
                 <h3 className="font-bold text-base flex items-center gap-2">

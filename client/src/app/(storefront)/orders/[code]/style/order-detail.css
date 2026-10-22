@@ -1,0 +1,14 @@
+/* Styles for Order Detail & Tracking Page */
+.order-detail-container {
+  min-height: calc(100vh - 180px);
+}
+
+.order-detail-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.order-summary-sticky {
+  position: sticky;
+  top: 5.5rem;
+}
+

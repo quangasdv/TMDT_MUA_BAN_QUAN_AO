@@ -790,8 +790,8 @@ export default function ProductDetailPage() {
 
       {/* 4. SIZE CHART MODAL POPUP */}
       {isSizeChartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-white dark:bg-zinc-950 rounded-3xl border border-border p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/25 dark:bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-card text-card-foreground rounded-3xl border border-border p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <Ruler size={18} className="text-primary" />

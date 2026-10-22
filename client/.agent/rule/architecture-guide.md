@@ -131,6 +131,7 @@ Mỗi khi tạo một trang hoặc tính năng mới trong `src/app/`, bắt bu�
 - Thiết kế phong cách theo link: https://www.figma.com/design/durxJaayMhZ6z9I4iHoID9/Modern-E-Commerce-Website-Design-Template--Community-?node-id=49-4172&t=FtqjEyDuAuTjXSuD-0
 - Nhớ có responsive
 - Dùng toast để tạo thông báo có thể config toast theo style, theme theo link figma để đồng bộ giao diện
+- Nếu backend không cung cấp ảnh thì dùng ảnh mặc định trong folder public/images/default.jpg
 
 ### 3.5. Quy tắc kiểm thử
 
@@ -138,6 +139,7 @@ Mỗi khi tạo một trang hoặc tính năng mới trong `src/app/`, bắt bu�
 - Tự viết unit test
 - Kiểm tra toàn bộ API, viết thành 1 bảng trong file testAPI.md, những API nào test rồi sẽ không test nữa
 - Viết file kiểm thử vào folder test
+- Tự chụp màn hình lại, tự sửa theo hình đã chụp nếu thấy không hợp lý theo style
 
 ## 4. Hướng dẫn Đọc Ngữ cảnh (Context Files to Read First)
 

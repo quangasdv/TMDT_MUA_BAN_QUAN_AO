@@ -1,0 +1,37 @@
+/* Styles for Checkout Page */
+.checkout-page-container {
+  min-height: calc(100vh - 180px);
+}
+
+.checkout-summary-sticky {
+  position: sticky;
+  top: 5.5rem;
+}
+
+.checkout-radio-option {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.checkout-radio-option:hover {
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.checkout-badge-pulse {
+  animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+

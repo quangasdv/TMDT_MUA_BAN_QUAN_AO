@@ -478,8 +478,8 @@ export default function CartPage() {
 
       {/* 4. Confirmation Dialog for Item Deletion */}
       {itemToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-white dark:bg-zinc-950 rounded-2xl border border-border p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/25 dark:bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-card text-card-foreground rounded-2xl border border-border p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2 text-destructive">
                 <Trash2 size={20} />

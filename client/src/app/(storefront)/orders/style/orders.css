@@ -1,0 +1,14 @@
+/* Styles for Orders History Screen */
+.orders-page-container {
+  min-height: calc(100vh - 180px);
+}
+
+.order-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.order-card:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
