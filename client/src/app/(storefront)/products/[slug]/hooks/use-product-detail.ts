@@ -7,6 +7,12 @@ import {
   ProductDetail,
   ProductVariant,
 } from "../validation/product-detail.validation";
+import {
+  getFitRecommendationApi,
+  FitAdvisorResult,
+  FitPreference,
+} from "@/api/fit-advisor.api";
+import { toast } from "react-toastify";
 
 export function useProductDetail(slug: string) {
   const [rawColor, setRawColor] = useState<string>("");
@@ -14,8 +20,17 @@ export function useProductDetail(slug: string) {
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState<boolean>(false);
+
+  // States cho Smart Fit Advisor form
   const [advisorHeight, setAdvisorHeight] = useState<string>("");
   const [advisorWeight, setAdvisorWeight] = useState<string>("");
+  const [advisorChest, setAdvisorChest] = useState<string>("");
+  const [advisorWaist, setAdvisorWaist] = useState<string>("");
+  const [advisorHips, setAdvisorHips] = useState<string>("");
+  const [advisorPreference, setAdvisorPreference] = useState<FitPreference>("REGULAR");
+  const [advisorResult, setAdvisorResult] = useState<FitAdvisorResult | null>(null);
+  const [isAdvisorLoading, setIsAdvisorLoading] = useState<boolean>(false);
+  const [advisorError, setAdvisorError] = useState<string | null>(null);
 
   // 1. Gọi API Chi tiết Sản phẩm từ feature api module
   const {
@@ -141,41 +156,69 @@ export function useProductDetail(slug: string) {
     setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
   }, []);
 
-  // Thuật toán Smart Fit Advisor dựa trên dữ liệu sizeCharts từ DB
-  const recommendedSize = useMemo(() => {
-    const h = parseFloat(advisorHeight);
-    const w = parseFloat(advisorWeight);
-    if (!h || !w || !product?.sizeCharts || product.sizeCharts.length === 0) {
-      return null;
+  // Gọi API Smart Fit Advisor (POST /api/fit-advisor/recommend)
+  const requestRecommendation = useCallback(async () => {
+    const height = parseFloat(advisorHeight);
+    const weight = parseFloat(advisorWeight);
+
+    if (!height || isNaN(height) || height < 100 || height > 250) {
+      setAdvisorError("Vui lòng nhập chiều cao hợp lệ (100 - 250 cm).");
+      return;
+    }
+    if (!weight || isNaN(weight) || weight < 30 || weight > 200) {
+      setAdvisorError("Vui lòng nhập cân nặng hợp lệ (30 - 200 kg).");
+      return;
+    }
+    if (!product?.id) {
+      setAdvisorError("Không tìm thấy thông tin sản phẩm.");
+      return;
     }
 
-    // Tìm size khớp cả chiều cao và cân nặng
-    const exactMatch = product.sizeCharts.find(
-      (sc) =>
-        h >= sc.minHeightCm &&
-        h <= sc.maxHeightCm &&
-        w >= sc.minWeightKg &&
-        w <= sc.maxWeightKg
-    );
-    if (exactMatch) return exactMatch.size;
+    setAdvisorError(null);
+    setIsAdvisorLoading(true);
 
-    // Nếu không khớp đồng thời, tính khoảng cách điểm chuẩn
-    let bestSize: string | null = null;
-    let minDistance = Infinity;
+    try {
+      const res = await getFitRecommendationApi({
+        productId: product.id,
+        heightCm: height,
+        weightKg: weight,
+        chestCm: advisorChest ? parseFloat(advisorChest) : undefined,
+        waistCm: advisorWaist ? parseFloat(advisorWaist) : undefined,
+        hipsCm: advisorHips ? parseFloat(advisorHips) : undefined,
+        fitPreference: advisorPreference,
+      });
 
-    for (const sc of product.sizeCharts) {
-      const midH = (sc.minHeightCm + sc.maxHeightCm) / 2;
-      const midW = (sc.minWeightKg + sc.maxWeightKg) / 2;
-      // Trọng số chuẩn: cân nặng 60%, chiều cao 40%
-      const dist = Math.pow((h - midH) / 10, 2) * 0.4 + Math.pow((w - midW) / 5, 2) * 0.6;
-      if (dist < minDistance) {
-        minDistance = dist;
-        bestSize = sc.size;
+      if (res.success && res.data) {
+        setAdvisorResult(res.data);
+        toast.success(`Hệ thống gợi ý Size ${res.data.recommendedSize} cho bạn!`);
+      } else {
+        setAdvisorError(res.message || "Không thể tính toán size đề xuất.");
       }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Đã có lỗi xảy ra khi tính toán size đề xuất.";
+      setAdvisorError(message);
+      toast.error(message);
+    } finally {
+      setIsAdvisorLoading(false);
     }
+  }, [
+    advisorHeight,
+    advisorWeight,
+    advisorChest,
+    advisorWaist,
+    advisorHips,
+    advisorPreference,
+    product,
+  ]);
 
-    return bestSize;
-  }, [advisorHeight, advisorWeight, product]);
+  // Áp dụng size đề xuất từ Smart Fit Advisor vào form mua hàng
+  const applyRecommendedSize = useCallback(() => {
+    if (advisorResult?.recommendedSize) {
+      handleSelectSize(advisorResult.recommendedSize);
+      toast.info(`Đã chọn Size ${advisorResult.recommendedSize}.`);
+    }
+  }, [advisorResult, handleSelectSize]);
 
   return {
     product,
@@ -195,7 +238,13 @@ export function useProductDetail(slug: string) {
     error,
     advisorHeight,
     advisorWeight,
-    recommendedSize,
+    advisorChest,
+    advisorWaist,
+    advisorHips,
+    advisorPreference,
+    advisorResult,
+    isAdvisorLoading,
+    advisorError,
     refetch,
     setSelectedColor: handleSelectColor,
     setSelectedSize: handleSelectSize,
@@ -204,6 +253,12 @@ export function useProductDetail(slug: string) {
     setIsSizeChartOpen,
     setAdvisorHeight,
     setAdvisorWeight,
+    setAdvisorChest,
+    setAdvisorWaist,
+    setAdvisorHips,
+    setAdvisorPreference,
+    requestRecommendation,
+    applyRecommendedSize,
     increaseQuantity,
     decreaseQuantity,
     isSizeAvailableForColor,

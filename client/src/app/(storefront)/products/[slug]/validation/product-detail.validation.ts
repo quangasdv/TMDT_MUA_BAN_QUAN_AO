@@ -91,11 +91,30 @@ export const smartFitSchema = z.object({
   height: z.coerce
     .number()
     .min(100, "Chiều cao tối thiểu là 100 cm")
-    .max(220, "Chiều cao tối đa là 220 cm"),
+    .max(250, "Chiều cao tối đa là 250 cm"),
   weight: z.coerce
     .number()
     .min(30, "Cân nặng tối thiểu là 30 kg")
-    .max(150, "Cân nặng tối đa là 150 kg"),
+    .max(200, "Cân nặng tối đa là 200 kg"),
+  chest: z.coerce
+    .number()
+    .min(50, "Vòng ngực không hợp lệ")
+    .max(160, "Vòng ngực tối đa 160 cm")
+    .optional()
+    .or(z.literal("")),
+  waist: z.coerce
+    .number()
+    .min(40, "Vòng eo không hợp lệ")
+    .max(160, "Vòng eo tối đa 160 cm")
+    .optional()
+    .or(z.literal("")),
+  hips: z.coerce
+    .number()
+    .min(50, "Vòng mông không hợp lệ")
+    .max(180, "Vòng mông tối đa 180 cm")
+    .optional()
+    .or(z.literal("")),
+  fitPreference: z.enum(["TIGHT", "REGULAR", "LOOSE"]).default("REGULAR"),
 });
 
 export type SmartFitForm = z.infer<typeof smartFitSchema>;

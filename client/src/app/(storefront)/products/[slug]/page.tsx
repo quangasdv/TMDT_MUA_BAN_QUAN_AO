@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useProductDetail } from "./hooks/use-product-detail";
+import { useCart } from "@/app/(storefront)/cart/hooks/use-cart";
 import { formatPrice } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,6 @@ import {
   ShieldCheck,
   Sparkles,
   Shirt,
-  Info,
 } from "lucide-react";
 import "./style/product-detail.css";
 
@@ -52,7 +52,13 @@ export default function ProductDetailPage() {
     isError,
     advisorHeight,
     advisorWeight,
-    recommendedSize,
+    advisorChest,
+    advisorWaist,
+    advisorHips,
+    advisorPreference,
+    advisorResult,
+    isAdvisorLoading,
+    advisorError,
     refetch,
     setSelectedColor,
     setSelectedSize,
@@ -60,12 +66,19 @@ export default function ProductDetailPage() {
     setIsSizeChartOpen,
     setAdvisorHeight,
     setAdvisorWeight,
+    setAdvisorChest,
+    setAdvisorWaist,
+    setAdvisorHips,
+    setAdvisorPreference,
+    requestRecommendation,
+    applyRecommendedSize,
     increaseQuantity,
     decreaseQuantity,
     isSizeAvailableForColor,
     getSizeStock,
   } = useProductDetail(slug);
 
+  const { addItem, isAddingItem } = useCart();
   const [imageError, setImageError] = useState(false);
 
   // Kiểm tra xem bảng kích thước có thông số vòng ngực / vòng eo không (quần thường không có ngực)
@@ -85,7 +98,7 @@ export default function ProductDetailPage() {
     [product?.sizeCharts]
   );
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!activeVariant) {
       toast.warning("Vui lòng chọn đầy đủ màu sắc và kích cỡ sản phẩm.");
       return;
@@ -95,10 +108,14 @@ export default function ProductDetailPage() {
       return;
     }
 
-    // Tuân thủ quy định Batch 2: Chỉ dựng UI và thông báo kết nối Batch 3
-    toast.info(
-      `Đã chọn ${quantity}x "${product?.name}" (${activeVariant.color} - Size ${activeVariant.size}). Chức năng giỏ hàng sẽ được kết nối chính thức trong Batch 3.`
-    );
+    try {
+      await addItem({ variantId: activeVariant.id, quantity });
+      toast.success(
+        `Đã thêm ${quantity}x "${product?.name}" (${activeVariant.color} - Size ${activeVariant.size}) vào giỏ hàng thành công!`
+      );
+    } catch {
+      // Lỗi đã được xử lý bởi onError trong useCart
+    }
   };
 
   // 1. Loading Skeleton State
@@ -451,11 +468,15 @@ export default function ProductDetailPage() {
                 <Button
                   size="lg"
                   className="flex-1 h-12 text-sm font-bold gap-2 rounded-xl shadow-sm cursor-pointer"
-                  disabled={isCurrentOutOfStock}
+                  disabled={isCurrentOutOfStock || isAddingItem}
                   onClick={handleAddToCart}
                 >
                   <ShoppingBag size={17} />
-                  {isCurrentOutOfStock ? "Tạm thời hết hàng" : "Thêm vào giỏ hàng"}
+                  {isAddingItem
+                    ? "Đang thêm vào giỏ..."
+                    : isCurrentOutOfStock
+                    ? "Tạm thời hết hàng"
+                    : "Thêm vào giỏ hàng"}
                 </Button>
               </div>
 
@@ -573,22 +594,30 @@ export default function ProductDetailPage() {
               </table>
             </div>
 
-            {/* Smart Fit Advisor Interactive Box */}
-            <div className="lg:col-span-4 smart-fit-card rounded-2xl p-6 space-y-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-primary" />
-                <h3 className="font-bold text-sm text-foreground">
-                  Smart Fit Advisor
-                </h3>
+            {/* Smart Fit Advisor Interactive Box (Powered by POST /api/fit-advisor/recommend) */}
+            <div className="lg:col-span-4 smart-fit-card rounded-2xl p-6 space-y-4 shadow-sm border border-border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary" />
+                  <h3 className="font-bold text-sm text-foreground">
+                    Smart Fit Advisor AI
+                  </h3>
+                </div>
+                <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary">
+                  AI Size Recommendation
+                </Badge>
               </div>
+
               <p className="text-xs text-muted-foreground">
-                Nhập số đo chiều cao và cân nặng để hệ thống đề xuất size phù hợp nhất:
+                Nhập số đo nhân trắc học để thuật toán AI phân tích và đề xuất size tối ưu từ dữ liệu size chart thật:
               </p>
 
+              {/* Bắt buộc: Chiều cao & Cân nặng */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground">
-                    Chiều cao (cm)
+                  <label className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+                    <span>Chiều cao *</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">cm</span>
                   </label>
                   <Input
                     type="number"
@@ -597,12 +626,13 @@ export default function ProductDetailPage() {
                     onChange={(e) => setAdvisorHeight(e.target.value)}
                     className="h-9 text-xs"
                     min={100}
-                    max={220}
+                    max={250}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground">
-                    Cân nặng (kg)
+                  <label className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+                    <span>Cân nặng *</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">kg</span>
                   </label>
                   <Input
                     type="number"
@@ -611,32 +641,146 @@ export default function ProductDetailPage() {
                     onChange={(e) => setAdvisorWeight(e.target.value)}
                     className="h-9 text-xs"
                     min={30}
-                    max={150}
+                    max={200}
                   />
                 </div>
               </div>
 
-              {recommendedSize ? (
-                <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-border space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">
-                    <CheckCircle2 size={15} />
-                    <span>Gợi ý chuẩn: Size {recommendedSize}</span>
+              {/* Tùy chọn: Vòng ngực, eo, mông */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground block truncate">
+                    Vòng ngực
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="cm"
+                    value={advisorChest}
+                    onChange={(e) => setAdvisorChest(e.target.value)}
+                    className="h-8 text-xs px-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground block truncate">
+                    Vòng eo
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="cm"
+                    value={advisorWaist}
+                    onChange={(e) => setAdvisorWaist(e.target.value)}
+                    className="h-8 text-xs px-2"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground block truncate">
+                    Vòng mông
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="cm"
+                    value={advisorHips}
+                    onChange={(e) => setAdvisorHips(e.target.value)}
+                    className="h-8 text-xs px-2"
+                  />
+                </div>
+              </div>
+
+              {/* Phong cách mặc: TIGHT / REGULAR / LOOSE */}
+              <div className="space-y-1.5 pt-1">
+                <label className="text-[11px] font-semibold text-muted-foreground block">
+                  Phong cách mặc mong muốn
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      { key: "TIGHT", label: "Ôm sát" },
+                      { key: "REGULAR", label: "Vừa vặn" },
+                      { key: "LOOSE", label: "Rộng rãi" },
+                    ] as const
+                  ).map((pref) => (
+                    <button
+                      key={pref.key}
+                      type="button"
+                      onClick={() => setAdvisorPreference(pref.key)}
+                      className={cn(
+                        "h-8 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
+                        advisorPreference === pref.key
+                          ? "bg-foreground text-background border-foreground shadow-sm"
+                          : "border-border text-muted-foreground hover:bg-muted/40"
+                      )}
+                    >
+                      {pref.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="button"
+                size="sm"
+                className="w-full text-xs font-bold gap-2 cursor-pointer h-9 shadow-sm"
+                onClick={requestRecommendation}
+                disabled={isAdvisorLoading || !advisorHeight || !advisorWeight}
+              >
+                {isAdvisorLoading ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    Đang phân tích số đo qua AI...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} />
+                    Gợi ý kích cỡ thông minh
+                  </>
+                )}
+              </Button>
+
+              {/* Error Message */}
+              {advisorError && (
+                <div className="p-2.5 bg-destructive/10 text-destructive text-xs rounded-xl flex items-center gap-2">
+                  <XCircle size={14} className="shrink-0" />
+                  <span>{advisorError}</span>
+                </div>
+              )}
+
+              {/* Result Box từ backend API */}
+              {advisorResult && (
+                <div className="p-4 bg-white dark:bg-zinc-900 rounded-xl border border-primary/40 space-y-3 shadow-md animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                        Size đề xuất từ hệ thống
+                      </span>
+                      <span className="text-2xl font-black text-foreground">
+                        Size {advisorResult.recommendedSize}
+                      </span>
+                    </div>
+                    <Badge variant="success" className="text-xs px-2.5 py-1 font-bold">
+                      Khớp {advisorResult.confidenceScore}
+                    </Badge>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Phù hợp nhất với dáng người của bạn cho mẫu sản phẩm này.
+
+                  {advisorResult.fitType && (
+                    <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 size={14} />
+                      <span>{advisorResult.fitType}</span>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {advisorResult.advice ||
+                      `Size ${advisorResult.recommendedSize} là lựa chọn lý tưởng nhất cho số đo của bạn (độ tin cậy ${advisorResult.confidenceScore}).`}
                   </p>
+
                   <Button
                     size="xs"
-                    className="w-full text-xs font-semibold cursor-pointer"
-                    onClick={() => setSelectedSize(recommendedSize)}
+                    className="w-full text-xs font-bold cursor-pointer h-8"
+                    onClick={applyRecommendedSize}
                   >
-                    Chọn Size {recommendedSize} ngay
+                    Chọn Size {advisorResult.recommendedSize} ngay
                   </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground/80 pt-1">
-                  <Info size={13} />
-                  <span>Nhập số đo để xem kết quả tư vấn tự động.</span>
                 </div>
               )}
             </div>

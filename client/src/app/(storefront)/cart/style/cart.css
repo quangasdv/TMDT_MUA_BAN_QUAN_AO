@@ -1,0 +1,29 @@
+/* TrendyFit Shopping Cart Styling */
+
+.cart-item-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.cart-item-card:hover {
+  border-color: hsl(var(--border));
+}
+
+.cart-progress-bar {
+  height: 6px;
+  background-color: hsl(var(--muted));
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.cart-progress-fill {
+  height: 100%;
+  background-color: hsl(var(--primary));
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cart-summary-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 6rem;
+}
+

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getCategoriesApi } from "@/api/products.api";
 import { useAuthStore } from "@/stores/auth.store";
+import { useCart } from "@/app/(storefront)/cart/hooks/use-cart";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ export function Header() {
   const mounted = useIsMounted();
 
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { totalItemCount } = useCart();
 
   // Lấy danh mục sản phẩm từ API
   const { data: categoriesData } = useQuery({
@@ -244,6 +246,11 @@ export function Header() {
             aria-label="Giỏ hàng"
           >
             <ShoppingBag size={18} />
+            {mounted && totalItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground shadow-sm animate-in zoom-in-50 duration-150">
+                {totalItemCount > 99 ? "99+" : totalItemCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>
@@ -281,6 +288,21 @@ export function Header() {
               className="py-1.5 text-foreground hover:text-primary"
             >
               Tất cả sản phẩm
+            </Link>
+            <Link
+              href="/cart"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between py-1.5 text-foreground hover:text-primary"
+            >
+              <span className="flex items-center gap-2">
+                <ShoppingBag size={16} />
+                Giỏ hàng
+              </span>
+              {mounted && totalItemCount > 0 && (
+                <Badge variant="default" className="text-[10px] px-2 py-0.5">
+                  {totalItemCount} món
+                </Badge>
+              )}
             </Link>
 
             <div className="border-t border-border pt-2">
