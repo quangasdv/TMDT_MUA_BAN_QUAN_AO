@@ -17,7 +17,7 @@
 ### Phần 1: Giới thiệu Bài toán và Kiến trúc Hệ thống (Phút 1 - 3)
 * **Quang trình bày:**
   - Chào Thầy và Hội đồng. Giới thiệu đề tài: *Hệ thống TMĐT thời trang TrendyFit giải quyết 2 bài toán nhức nhối của ngành: Tỷ lệ hoàn hàng 30% do sai kích cỡ và trải nghiệm mua sắm rời rạc thiếu đồng bộ outfit.*
-  - Trình bày nhanh slide Sơ đồ Kiến trúc Headless: Tách biệt Next.js 14 và Express TypeScript, cơ sở dữ liệu PostgreSQL chuẩn hóa 12 bảng.
+  - Trình bày nhanh slide Sơ đồ Kiến trúc Headless: Tách biệt Next.js 16 (Turbopack) và Express TypeScript, cơ sở dữ liệu PostgreSQL chuẩn hóa 14 bảng.
 
 ### Phần 2: Trình diễn Module Phòng Phối Đồ Tương Tác - Outfit Builder (Phút 4 - 6)
 * **Tân thao tác trên màn hình:**
@@ -38,7 +38,7 @@
 ### Phần 4: Trình diễn Khóa Kho Đồng Thời & Thanh Toán VietQR (Phút 10 - 12)
 * **Nguyên & Phố phối hợp trình bày:**
   - Chuyển sang giỏ hàng và bấm **"Thanh toán"**.
-  - **Nguyên giải thích kỹ thuật:** *Tại thời điểm bấm thanh toán, hệ thống thực hiện một Database Transaction với Pessimistic Lock, ghi nhận bản ghi `InventoryLock` giữ hàng trong 10 phút. Nếu 2 người cùng tranh mua 1 sản phẩm cuối cùng, người thứ 2 sẽ bị từ chối ngay với HTTP 409.*
+  - **Nguyên giải thích kỹ thuật:** *Tại thời điểm bấm thanh toán, hệ thống thực hiện một Database Transaction với Atomic Conditional Update, ghi nhận bản ghi `InventoryLock` giữ hàng trong 10 phút. Nếu 2 người cùng tranh mua 1 sản phẩm cuối cùng, người thứ 2 sẽ bị từ chối ngay với HTTP 409.*
   - **Phố thao tác thanh toán:**
     - Màn hình hiện mã VietQR động cùng đồng hồ đếm ngược `10:00`.
     - Dùng điện thoại quét mã VietQR (hoặc dùng nút "Mô phỏng quét mã thành công" nếu mạng trường chập chờn).
