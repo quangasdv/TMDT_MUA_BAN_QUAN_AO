@@ -29,6 +29,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { VIETNAM_ADDRESSES } from "./data/vietnam-address.data";
+import { CartItem } from "../cart/validation/cart.validation";
 import "./style/checkout.css";
 
 export default function CheckoutPage() {
@@ -666,7 +667,7 @@ export default function CheckoutPage() {
 
               {/* Danh sách sản phẩm thu gọn - FIX HIỂN THỊ ẢNH */}
               <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
-                {items.map((item) => {
+                {items.map((item: CartItem) => {
                   const product = item.variant?.product;
                   const unitPrice =
                     (Number(product?.basePrice) || 0) + (Number(item.variant?.priceAdjustment) || 0);

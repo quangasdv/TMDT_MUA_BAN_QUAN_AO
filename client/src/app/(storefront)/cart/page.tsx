@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCart } from "./hooks/use-cart";
+import { useCart, CHECKOUT_SELECTED_STORAGE_KEY } from "./hooks/use-cart";
 import { CartItem } from "./validation/cart.validation";
 import { useAuthStore } from "@/stores/auth.store";
 import { formatPrice } from "@/lib/utils";
@@ -28,6 +28,8 @@ import {
   Sparkles,
   ChevronRight,
   X,
+  CheckSquare,
+  Check,
 } from "lucide-react";
 import "./style/cart.css";
 
@@ -39,14 +41,26 @@ export default function CartPage() {
   const {
     items,
     totalItemCount,
-    subtotalPrice,
-    shippingFee,
-    finalTotal,
-    isFreeShipping,
-    amountNeededForFreeShipping,
-    freeShippingProgress,
-    hasOutOfStockItems,
-    hasExceededStockItems,
+    // Selection state & calculations
+    selectedItemIds,
+    selectedItems,
+    selectedItemCount,
+    selectedSubtotalPrice,
+    selectedShippingFee,
+    selectedFinalTotal,
+    selectedIsFreeShipping,
+    selectedAmountNeededForFreeShipping,
+    selectedFreeShippingProgress,
+    hasSelectedOutOfStockItems,
+    hasSelectedExceededStockItems,
+    isItemSelected,
+    toggleSelectItem,
+    selectAllItems,
+    unselectAllItems,
+    toggleSelectAll,
+    isAllSelected,
+    selectableItemsCount,
+    // Base states & mutations
     isLoading,
     isError,
     updatingItemIds,
@@ -56,16 +70,28 @@ export default function CartPage() {
   } = useCart();
 
   const handleCheckoutClick = () => {
-    if (items.length === 0) {
-      toast.warning("Giỏ hàng của bạn đang trống.");
+    if (selectedItems.length === 0) {
+      toast.warning("Vui lòng chọn ít nhất 1 sản phẩm để tiến hành thanh toán.");
       return;
     }
 
-    if (hasOutOfStockItems || hasExceededStockItems) {
+    if (hasSelectedOutOfStockItems || hasSelectedExceededStockItems) {
       toast.error(
-        "Giỏ hàng có sản phẩm đã hết hàng hoặc vượt quá tồn kho. Vui lòng điều chỉnh trước khi thanh toán."
+        "Sản phẩm đã chọn có món hết hàng hoặc vượt quá tồn kho. Vui lòng điều chỉnh trước khi thanh toán."
       );
       return;
+    }
+
+    // Lưu các ID được chọn vào sessionStorage để trang Checkout xử lý chính xác
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          CHECKOUT_SELECTED_STORAGE_KEY,
+          JSON.stringify(Array.from(selectedItemIds))
+        );
+      } catch {
+        // ignore
+      }
     }
 
     if (!isAuthenticated) {
@@ -125,12 +151,19 @@ export default function CartPage() {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-4">
           <AlertTriangle size={32} />
         </div>
-        <h1 className="text-xl font-bold text-foreground">Không thể tải giỏ hàng</h1>
+        <h1 className="text-xl font-bold text-foreground">
+          Không thể tải giỏ hàng
+        </h1>
         <p className="text-sm text-muted-foreground mt-2 mb-6">
           Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.
         </p>
         <div className="flex justify-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2 cursor-pointer">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="gap-2 cursor-pointer"
+          >
             <RefreshCw size={14} />
             Thử lại
           </Button>
@@ -161,7 +194,10 @@ export default function CartPage() {
         </p>
         <Link
           href="/products"
-          className={cn(buttonVariants({ size: "lg" }), "gap-2 font-bold px-8 rounded-xl shadow-sm")}
+          className={cn(
+            buttonVariants({ size: "lg" }),
+            "gap-2 font-bold px-8 rounded-xl shadow-sm"
+          )}
         >
           <Sparkles size={16} />
           Khám phá sản phẩm ngay
@@ -178,7 +214,9 @@ export default function CartPage() {
           Trang chủ
         </Link>
         <ChevronRight size={12} />
-        <span className="text-foreground font-semibold">Giỏ hàng ({totalItemCount})</span>
+        <span className="text-foreground font-semibold">
+          Giỏ hàng ({totalItemCount})
+        </span>
       </nav>
 
       {/* 2. Page Title & Free Shipping Bar */}
@@ -188,38 +226,42 @@ export default function CartPage() {
             Giỏ hàng của bạn
           </h1>
           <span className="text-xs text-muted-foreground font-medium">
-            ({totalItemCount} sản phẩm sẵn sàng đặt mua)
+            (Đã chọn <strong>{selectedItemCount}</strong> / {totalItemCount} sản phẩm để thanh toán)
           </span>
         </div>
 
-        {/* Free Shipping Progress Indicator */}
+        {/* Free Shipping Progress Indicator (Dựa trên tổng tiền các món ĐÃ CHỌN) */}
         <div className="mt-4 p-4 rounded-2xl border border-border bg-muted/20">
           <div className="flex items-center justify-between text-xs font-semibold mb-2">
             <span className="flex items-center gap-1.5 text-foreground">
               <Truck size={15} className="text-primary" />
-              {isFreeShipping ? (
+              {selectedItemCount === 0 ? (
+                <span>
+                  Chọn các sản phẩm trong giỏ để áp dụng ưu đãi <strong>MIỄN PHÍ VẬN CHUYỂN</strong> (Đơn từ 499.000đ).
+                </span>
+              ) : selectedIsFreeShipping ? (
                 <strong className="text-emerald-600">
-                  🎉 Bạn được MIỄN PHÍ VẬN CHUYỂN cho đơn hàng này!
+                  🎉 Các món bạn chọn đã đạt điều kiện MIỄN PHÍ VẬN CHUYỂN!
                 </strong>
               ) : (
                 <span>
-                  Mua thêm{" "}
+                  Chọn thêm{" "}
                   <strong className="text-foreground">
-                    {formatPrice(amountNeededForFreeShipping)}
+                    {formatPrice(selectedAmountNeededForFreeShipping)}
                   </strong>{" "}
                   để được <strong>MIỄN PHÍ VẬN CHUYỂN</strong>
                 </span>
               )}
             </span>
             <span className="text-muted-foreground text-[11px]">
-              {freeShippingProgress}%
+              {selectedFreeShippingProgress}%
             </span>
           </div>
 
           <div className="cart-progress-bar">
             <div
               className="cart-progress-fill"
-              style={{ width: `${freeShippingProgress}%` }}
+              style={{ width: `${selectedFreeShippingProgress}%` }}
             />
           </div>
         </div>
@@ -227,38 +269,119 @@ export default function CartPage() {
 
       {/* 3. Main Grid (Items List + Summary) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
-        {/* LEFT COLUMN: Items List */}
+        {/* LEFT COLUMN: Selection Toolbar & Items List */}
         <div className="lg:col-span-8 space-y-4">
+          {/* SELECT ALL TOOLBAR */}
+          <div className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card shadow-xs">
+            <div
+              onClick={toggleSelectAll}
+              className="flex items-center gap-3 cursor-pointer select-none"
+            >
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={isAllSelected}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSelectAll();
+                }}
+                className={cn(
+                  "h-5 w-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0",
+                  isAllSelected
+                    ? "bg-slate-900 border-slate-900 text-primary shadow-xs"
+                    : "bg-white border-slate-300 hover:border-slate-400"
+                )}
+              >
+                {isAllSelected && <Check size={13} strokeWidth={3.5} />}
+              </button>
+              <span className="text-sm font-bold text-foreground">
+                Chọn tất cả ({totalItemCount} sản phẩm)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Đã chọn: <strong className="text-foreground font-black">{selectedItemCount}</strong> món
+              </span>
+              {selectedItemCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={unselectAllItems}
+                  className="text-xs text-muted-foreground hover:text-foreground font-medium underline cursor-pointer"
+                >
+                  Bỏ chọn tất cả
+                </button>
+              ) : selectableItemsCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={selectAllItems}
+                  className="text-xs text-primary-foreground font-bold hover:underline cursor-pointer"
+                >
+                  Chọn tất cả
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* ITEM CARDS */}
           {items.map((item) => {
             const variant = item.variant;
             const product = variant?.product;
             const unitPrice =
-              (Number(product?.basePrice) || 0) + (Number(variant?.priceAdjustment) || 0);
+              (Number(product?.basePrice) || 0) +
+              (Number(variant?.priceAdjustment) || 0);
             const itemTotal = unitPrice * item.quantity;
             const isUpdating = updatingItemIds.has(item.id);
             const isOutOfStock = variant.stockQuantity <= 0;
             const isExceededStock = item.quantity > variant.stockQuantity;
+            const isChecked = isItemSelected(item.id);
 
             const imageUrl =
               variant?.imageUrl ||
-              (product?.images && product.images.length > 0 ? product.images[0] : "");
+              (product?.images && product.images.length > 0
+                ? product.images[0]
+                : "");
 
             return (
               <div
                 key={item.id}
                 className={cn(
-                  "cart-item-card relative flex flex-col sm:flex-row gap-4 p-4 sm:p-5 rounded-2xl border bg-card shadow-sm",
+                  "cart-item-card relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-5 rounded-2xl border transition-all duration-200",
                   isOutOfStock
-                    ? "border-destructive/40 bg-destructive/5"
+                    ? "border-destructive/40 bg-destructive/5 opacity-60"
                     : isExceededStock
-                    ? "border-amber-500/40 bg-amber-500/5"
-                    : "border-border"
+                      ? "border-amber-500/40 bg-amber-500/5"
+                      : isChecked
+                        ? "border-slate-900/40 bg-card shadow-sm ring-1 ring-slate-900/5"
+                        : "border-border/70 bg-card/60 opacity-75 hover:opacity-100"
                 )}
               >
+                {/* Item Checkbox */}
+                <div className="flex items-center shrink-0 pr-1">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isChecked}
+                    disabled={isOutOfStock}
+                    onClick={() => !isOutOfStock && toggleSelectItem(item.id)}
+                    className={cn(
+                      "h-5 w-5 rounded-md border flex items-center justify-center transition-all shrink-0",
+                      isOutOfStock
+                        ? "bg-slate-100 border-slate-200 opacity-40 cursor-not-allowed"
+                        : isChecked
+                          ? "bg-slate-900 border-slate-900 text-primary shadow-xs cursor-pointer"
+                          : "bg-white border-slate-300 hover:border-slate-400 cursor-pointer"
+                    )}
+                    aria-label={`Chọn sản phẩm ${product?.name}`}
+                  >
+                    {isChecked && !isOutOfStock && <Check size={13} strokeWidth={3.5} />}
+                  </button>
+                </div>
+
                 {/* Product Thumbnail */}
                 <Link
                   href={product?.slug ? `/products/${product.slug}` : "#"}
-                  className="relative h-28 w-24 sm:h-32 sm:w-28 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shrink-0 self-center sm:self-start group"
+                  className="relative h-24 w-20 sm:h-28 sm:w-24 rounded-xl overflow-hidden bg-muted/30 border border-border/60 shrink-0 self-center sm:self-start group"
                 >
                   {imageUrl ? (
                     <img
@@ -274,7 +397,7 @@ export default function CartPage() {
                 </Link>
 
                 {/* Details */}
-                <div className="flex-1 flex flex-col justify-between min-w-0">
+                <div className="flex-1 flex flex-col justify-between min-w-0 w-full sm:w-auto">
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <Link
@@ -298,7 +421,7 @@ export default function CartPage() {
                     </div>
 
                     {/* Variant tags */}
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
                       {variant?.color && (
                         <Badge
                           variant="secondary"
@@ -326,7 +449,7 @@ export default function CartPage() {
                     {isOutOfStock ? (
                       <div className="flex items-center gap-1.5 text-xs font-bold text-destructive mt-2">
                         <AlertTriangle size={13} />
-                        <span>Sản phẩm này hiện đã hết hàng</span>
+                        <span>Sản phẩm này hiện đã hết hàng (Không thể chọn thanh toán)</span>
                       </div>
                     ) : isExceededStock ? (
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 mt-2">
@@ -343,10 +466,12 @@ export default function CartPage() {
                   </div>
 
                   {/* Pricing & Quantity Controls */}
-                  <div className="flex items-end justify-between gap-4 mt-4 pt-3 border-t border-border/50">
+                  <div className="flex items-end justify-between gap-4 mt-3 pt-3 border-t border-border/50">
                     {/* Unit Price */}
                     <div>
-                      <span className="text-xs text-muted-foreground block">Đơn giá</span>
+                      <span className="text-xs text-muted-foreground block">
+                        Đơn giá
+                      </span>
                       <span className="text-sm font-bold text-foreground">
                         {formatPrice(unitPrice)}
                       </span>
@@ -370,7 +495,9 @@ export default function CartPage() {
                         <button
                           type="button"
                           onClick={() => changeItemQuantity(item, item.quantity + 1)}
-                          disabled={isUpdating || item.quantity >= variant.stockQuantity}
+                          disabled={
+                            isUpdating || item.quantity >= variant.stockQuantity
+                          }
                           className="h-full px-2.5 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
                           aria-label="Tăng số lượng"
                         >
@@ -380,7 +507,9 @@ export default function CartPage() {
 
                       {/* Subtotal of item */}
                       <div className="text-right min-w-[90px]">
-                        <span className="text-xs text-muted-foreground block">Thành tiền</span>
+                        <span className="text-xs text-muted-foreground block">
+                          Thành tiền
+                        </span>
                         <span className="text-base font-black text-foreground">
                           {formatPrice(itemTotal)}
                         </span>
@@ -413,22 +542,28 @@ export default function CartPage() {
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between text-muted-foreground">
-                <span>Tổng số lượng</span>
-                <span className="font-bold text-foreground">{totalItemCount} sản phẩm</span>
+                <span>Số lượng món chọn mua</span>
+                <span className="font-bold text-foreground">
+                  {selectedItemCount} sản phẩm
+                </span>
               </div>
 
               <div className="flex justify-between text-muted-foreground">
-                <span>Tạm tính</span>
-                <span className="font-bold text-foreground">{formatPrice(subtotalPrice)}</span>
+                <span>Tạm tính (món đã chọn)</span>
+                <span className="font-bold text-foreground">
+                  {formatPrice(selectedSubtotalPrice)}
+                </span>
               </div>
 
               <div className="flex justify-between text-muted-foreground">
                 <span>Phí vận chuyển</span>
                 <span className="font-bold text-foreground">
-                  {isFreeShipping ? (
-                    <span className="text-emerald-600">Miễn phí</span>
+                  {selectedItemCount === 0 ? (
+                    "0 đ"
+                  ) : selectedIsFreeShipping ? (
+                    <span className="text-emerald-600 font-bold">Miễn phí</span>
                   ) : (
-                    formatPrice(shippingFee)
+                    formatPrice(selectedShippingFee)
                   )}
                 </span>
               </div>
@@ -439,10 +574,12 @@ export default function CartPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
                   Tổng thanh toán
                 </span>
-                <span className="text-[10px] text-muted-foreground">Đã bao gồm thuế GTGT</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {selectedItemCount > 0 ? `Cho ${selectedItemCount} món đã chọn` : "Chưa chọn sản phẩm"}
+                </span>
               </div>
               <span className="text-2xl font-black text-foreground tracking-tight">
-                {formatPrice(finalTotal)}
+                {formatPrice(selectedFinalTotal)}
               </span>
             </div>
 
@@ -450,11 +587,24 @@ export default function CartPage() {
             <Button
               size="lg"
               className="w-full h-12 text-sm font-bold gap-2 rounded-xl shadow-md cursor-pointer"
-              disabled={items.length === 0 || hasOutOfStockItems || hasExceededStockItems}
+              disabled={
+                selectedItemCount === 0 ||
+                hasSelectedOutOfStockItems ||
+                hasSelectedExceededStockItems
+              }
               onClick={handleCheckoutClick}
             >
-              Tiến hành đặt hàng
-              <ArrowRight size={16} />
+              {selectedItemCount > 0 ? (
+                <>
+                  Tiến hành đặt hàng ({selectedItemCount})
+                  <ArrowRight size={16} />
+                </>
+              ) : (
+                <>
+                  <CheckSquare size={16} />
+                  Chọn món để đặt hàng
+                </>
+              )}
             </Button>
 
             {/* Security and Trust Badges */}
@@ -483,7 +633,9 @@ export default function CartPage() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2 text-rose-600">
                 <Trash2 size={20} />
-                <h3 className="font-bold text-base text-slate-900">Xóa sản phẩm</h3>
+                <h3 className="font-bold text-base text-slate-900">
+                  Xóa sản phẩm
+                </h3>
               </div>
               <button
                 type="button"
@@ -499,7 +651,8 @@ export default function CartPage() {
               <strong className="text-slate-900">
                 {itemToDelete.variant?.product?.name}
               </strong>
-              &quot; ({itemToDelete.variant?.color} - Size {itemToDelete.variant?.size}) khỏi giỏ hàng?
+              &quot; ({itemToDelete.variant?.color} - Size{" "}
+              {itemToDelete.variant?.size}) khỏi giỏ hàng?
             </p>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -526,4 +679,3 @@ export default function CartPage() {
     </div>
   );
 }
-

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/stores/auth.store";
-import { useCart, FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE } from "../../cart/hooks/use-cart";
+import { useCart, FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE, CHECKOUT_SELECTED_STORAGE_KEY } from "../../cart/hooks/use-cart";
+import { CartItem } from "../../cart/validation/cart.validation";
 import {
   checkoutFormSchema,
   CheckoutFormValues,
@@ -21,7 +22,37 @@ export function useCheckout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isInitialized } = useAuthStore();
-  const { items, subtotalPrice, isLoading: isCartLoading } = useCart();
+  const { items: allCartItems, isLoading: isCartLoading } = useCart();
+
+  // Chỉ lấy các sản phẩm đã được người dùng tick chọn trong giỏ hàng (nếu có)
+  const items: CartItem[] = useMemo(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem(CHECKOUT_SELECTED_STORAGE_KEY);
+        if (stored) {
+          const selectedIds: string[] = JSON.parse(stored);
+          if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+            const filtered = allCartItems.filter((it: CartItem) => selectedIds.includes(it.id));
+            if (filtered.length > 0) {
+              return filtered;
+            }
+          }
+        }
+      } catch {
+        // Fallback to allCartItems
+      }
+    }
+    return allCartItems;
+  }, [allCartItems]);
+
+  const subtotalPrice = useMemo(() => {
+    return items.reduce((acc: number, it: CartItem) => {
+      const base = Number(it.variant?.product?.basePrice) || 0;
+      const adjust = Number(it.variant?.priceAdjustment) || 0;
+      const unitPrice = base + adjust;
+      return acc + unitPrice * (it.quantity || 0);
+    }, 0);
+  }, [items]);
 
   // State quản lý Voucher
   const [appliedVoucher, setAppliedVoucher] = useState<ApplyVoucherData | null>(null);
@@ -111,7 +142,14 @@ export function useCheckout() {
   const lockMutation = useMutation({
     mutationFn: lockAndCheckoutApi,
     onSuccess: (data: CheckoutLockResponse) => {
-      // 1. Dọn dẹp giỏ hàng cache phía frontend
+      // 1. Dọn dẹp lưu trữ các món đã chọn và giỏ hàng cache phía frontend
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("trendyfit_checkout_selected_item_ids");
+        } catch {
+          // ignore
+        }
+      }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
       // 2. Thông báo thành công và chuyển ngay đến trang thanh toán
@@ -158,7 +196,7 @@ export function useCheckout() {
       recipientPhone: values.recipientPhone.trim(),
       shippingAddress: values.shippingAddress.trim(),
       voucherCode: appliedVoucher?.code || undefined,
-      items: items.map((it) => ({
+      items: items.map((it: CartItem) => ({
         variantId: it.variantId,
         quantity: it.quantity,
       })),

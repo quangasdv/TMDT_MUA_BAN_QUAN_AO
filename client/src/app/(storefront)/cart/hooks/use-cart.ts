@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getCartApi,
@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/error";
 
 export const CART_QUERY_KEY = ["cart"] as const;
+export const CHECKOUT_SELECTED_STORAGE_KEY = "trendyfit_checkout_selected_item_ids";
 
 export const FREE_SHIPPING_THRESHOLD = 499000;
 export const STANDARD_SHIPPING_FEE = 30000;
@@ -24,6 +25,24 @@ export const STANDARD_SHIPPING_FEE = 30000;
 export function useCart() {
   const queryClient = useQueryClient();
   const [updatingItemIds, setUpdatingItemIds] = useState<Set<string>>(new Set());
+
+  // Trạng thái lưu trữ các ID sản phẩm được tick chọn (null: mặc định chọn tất cả sản phẩm còn hàng)
+  const [userSelectedIds, setUserSelectedIds] = useState<Set<string> | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem(CHECKOUT_SELECTED_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            return new Set(parsed);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  });
 
   // 1. Query: Lấy dữ liệu giỏ hàng hiện tại
   const {
@@ -43,7 +62,52 @@ export function useCart() {
   const cart: Cart | undefined = cartResponse?.data?.cart;
   const items: CartItem[] = useMemo(() => cart?.items || [], [cart]);
 
-  // 2. Tính toán các chỉ số tài chính và vận chuyển
+  // Tập hợp các ID hợp lệ được chọn
+  const effectiveSelectedIds = useMemo(() => {
+    if (userSelectedIds !== null) {
+      const currentItemIds = new Set(items.map((it) => it.id));
+      const filtered = new Set<string>();
+      userSelectedIds.forEach((id) => {
+        if (currentItemIds.has(id)) {
+          filtered.add(id);
+        }
+      });
+      return filtered;
+    }
+
+    // Mặc định: Chọn tất cả các sản phẩm còn hàng và còn hoạt động
+    const defaultSelected = new Set<string>();
+    items.forEach((it) => {
+      if (
+        it.variant?.stockQuantity > 0 &&
+        it.variant?.product?.isActive !== false
+      ) {
+        defaultSelected.add(it.id);
+      }
+    });
+    return defaultSelected;
+  }, [items, userSelectedIds]);
+
+  // Đồng bộ lựa chọn vào sessionStorage để chuyển sang trang Checkout
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(
+          CHECKOUT_SELECTED_STORAGE_KEY,
+          JSON.stringify(Array.from(effectiveSelectedIds))
+        );
+      } catch {
+        // ignore
+      }
+    }
+  }, [effectiveSelectedIds]);
+
+  // Danh sách các món ĐƯỢC CHỌN để thanh toán
+  const selectedItems = useMemo(() => {
+    return items.filter((it) => effectiveSelectedIds.has(it.id));
+  }, [items, effectiveSelectedIds]);
+
+  // 2. Tính toán tổng toàn bộ giỏ hàng (giữ tương thích ngược)
   const totalItemCount = useMemo(() => {
     return items.reduce((acc, it) => acc + (it.quantity || 0), 0);
   }, [items]);
@@ -58,12 +122,7 @@ export function useCart() {
   }, [items]);
 
   const isFreeShipping = subtotalPrice >= FREE_SHIPPING_THRESHOLD;
-
-  const shippingFee = useMemo(() => {
-    if (items.length === 0) return 0;
-    return isFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
-  }, [items.length, isFreeShipping]);
-
+  const shippingFee = items.length === 0 ? 0 : isFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
   const finalTotal = subtotalPrice + shippingFee;
 
   const amountNeededForFreeShipping = useMemo(() => {
@@ -75,7 +134,111 @@ export function useCart() {
     return Math.min(100, Math.round((subtotalPrice / FREE_SHIPPING_THRESHOLD) * 100));
   }, [subtotalPrice, items.length]);
 
-  // Kiểm tra tính hợp lệ của tồn kho
+  // 3. Tính toán CHỈ CHO CÁC MÓN ĐƯỢC CHỌN (Phục vụ Checkout)
+  const selectedItemCount = useMemo(() => {
+    return selectedItems.reduce((acc, it) => acc + (it.quantity || 0), 0);
+  }, [selectedItems]);
+
+  const selectedSubtotalPrice = useMemo(() => {
+    return selectedItems.reduce((acc, it) => {
+      const base = Number(it.variant?.product?.basePrice) || 0;
+      const adjust = Number(it.variant?.priceAdjustment) || 0;
+      const unitPrice = base + adjust;
+      return acc + unitPrice * (it.quantity || 0);
+    }, 0);
+  }, [selectedItems]);
+
+  const selectedIsFreeShipping = selectedSubtotalPrice >= FREE_SHIPPING_THRESHOLD;
+
+  const selectedShippingFee = useMemo(() => {
+    if (selectedItems.length === 0) return 0;
+    return selectedIsFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
+  }, [selectedItems.length, selectedIsFreeShipping]);
+
+  const selectedFinalTotal = selectedSubtotalPrice + selectedShippingFee;
+
+  const selectedAmountNeededForFreeShipping = useMemo(() => {
+    return Math.max(0, FREE_SHIPPING_THRESHOLD - selectedSubtotalPrice);
+  }, [selectedSubtotalPrice]);
+
+  const selectedFreeShippingProgress = useMemo(() => {
+    if (selectedItems.length === 0) return 0;
+    return Math.min(100, Math.round((selectedSubtotalPrice / FREE_SHIPPING_THRESHOLD) * 100));
+  }, [selectedSubtotalPrice, selectedItems.length]);
+
+  // Kiểm tra tồn kho cho các món được chọn
+  const hasSelectedOutOfStockItems = useMemo(() => {
+    return selectedItems.some(
+      (it) =>
+        it.variant.stockQuantity <= 0 ||
+        (it.variant.product && it.variant.product.isActive === false)
+    );
+  }, [selectedItems]);
+
+  const hasSelectedExceededStockItems = useMemo(() => {
+    return selectedItems.some((it) => it.quantity > it.variant.stockQuantity);
+  }, [selectedItems]);
+
+  // Thao tác chọn / bỏ chọn checkbox
+  const isItemSelected = useCallback(
+    (id: string) => effectiveSelectedIds.has(id),
+    [effectiveSelectedIds]
+  );
+
+  const toggleSelectItem = useCallback(
+    (id: string) => {
+      setUserSelectedIds((prev) => {
+        const next = new Set(prev ?? effectiveSelectedIds);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+    },
+    [effectiveSelectedIds]
+  );
+
+  const selectAllItems = useCallback(() => {
+    const selectableIds = items
+      .filter(
+        (it) =>
+          it.variant?.stockQuantity > 0 &&
+          it.variant?.product?.isActive !== false
+      )
+      .map((it) => it.id);
+    setUserSelectedIds(new Set(selectableIds));
+  }, [items]);
+
+  const unselectAllItems = useCallback(() => {
+    setUserSelectedIds(new Set());
+  }, []);
+
+  const selectableItemsCount = useMemo(() => {
+    return items.filter(
+      (it) =>
+        it.variant?.stockQuantity > 0 &&
+        it.variant?.product?.isActive !== false
+    ).length;
+  }, [items]);
+
+  const isAllSelected = useMemo(() => {
+    return (
+      selectableItemsCount > 0 &&
+      effectiveSelectedIds.size >= selectableItemsCount
+    );
+  }, [selectableItemsCount, effectiveSelectedIds.size]);
+
+  const toggleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      unselectAllItems();
+    } else {
+      selectAllItems();
+    }
+  }, [isAllSelected, unselectAllItems, selectAllItems]);
+
+  // Kiểm tra tồn kho toàn bộ giỏ (giữ tương thích)
   const hasOutOfStockItems = useMemo(() => {
     return items.some(
       (it) =>
@@ -101,7 +264,7 @@ export function useCart() {
     });
   }, []);
 
-  // 3. Mutation: Thêm sản phẩm vào giỏ
+  // 4. Mutation: Thêm sản phẩm vào giỏ
   const addItemMutation = useMutation({
     mutationFn: (payload: AddToCartPayload) => addToCartApi(payload),
     onSuccess: (data) => {
@@ -120,7 +283,7 @@ export function useCart() {
     },
   });
 
-  // 4. Mutation: Cập nhật số lượng món
+  // 5. Mutation: Cập nhật số lượng món
   const updateQuantityMutation = useMutation({
     mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
       return updateCartItemQuantityApi(id, { quantity });
@@ -150,7 +313,7 @@ export function useCart() {
     },
   });
 
-  // 5. Mutation: Xóa món khỏi giỏ
+  // 6. Mutation: Xóa món khỏi giỏ
   const removeItemMutation = useMutation({
     mutationFn: (id: string) => removeCartItemApi(id),
     onMutate: (id: string) => {
@@ -203,6 +366,7 @@ export function useCart() {
   return {
     cart,
     items,
+    // Thông tin tổng toàn bộ giỏ (tương thích)
     totalItemCount,
     subtotalPrice,
     shippingFee,
@@ -212,6 +376,26 @@ export function useCart() {
     freeShippingProgress,
     hasOutOfStockItems,
     hasExceededStockItems,
+    // Thông tin các món ĐƯỢC CHỌN (Selection)
+    selectedItemIds: effectiveSelectedIds,
+    selectedItems,
+    selectedItemCount,
+    selectedSubtotalPrice,
+    selectedShippingFee,
+    selectedFinalTotal,
+    selectedIsFreeShipping,
+    selectedAmountNeededForFreeShipping,
+    selectedFreeShippingProgress,
+    hasSelectedOutOfStockItems,
+    hasSelectedExceededStockItems,
+    isItemSelected,
+    toggleSelectItem,
+    selectAllItems,
+    unselectAllItems,
+    toggleSelectAll,
+    isAllSelected,
+    selectableItemsCount,
+    // Trạng thái truy vấn
     isLoading,
     isFetching,
     isError,

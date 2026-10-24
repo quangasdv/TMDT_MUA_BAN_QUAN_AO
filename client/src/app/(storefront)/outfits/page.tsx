@@ -471,24 +471,33 @@ export default function CombosPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`p-4 rounded-2xl border transition-all ${
+                        onClick={() => handleToggleAccessory(item.id)}
+                        className={`p-4 rounded-2xl border transition-all cursor-pointer select-none ${
                           isChecked
-                            ? "border-slate-900/60 bg-white shadow-xs"
-                            : "border-slate-200 bg-slate-50/40 opacity-70"
+                            ? "border-slate-900 bg-white shadow-sm ring-1 ring-slate-900/10"
+                            : "border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 opacity-80"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <label
-                            htmlFor={`acc-check-${item.id}`}
-                            className="flex items-center gap-3 cursor-pointer select-none min-w-0 flex-1"
-                          >
-                            <input
-                              id={`acc-check-${item.id}`}
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => handleToggleAccessory(item.id)}
-                              className="h-5 w-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 cursor-pointer accent-slate-900 shrink-0"
-                            />
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Explicit Custom Checkbox with SVG Check icon */}
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={isChecked}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleAccessory(item.id);
+                              }}
+                              className={`h-5 w-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                                isChecked
+                                  ? "bg-slate-900 border-slate-900 text-primary shadow-xs"
+                                  : "bg-white border-slate-300 hover:border-slate-400"
+                              }`}
+                            >
+                              {isChecked && <Check size={13} strokeWidth={3.5} />}
+                            </button>
+
                             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                               {currentVariant?.imageUrl || item.imageUrl ? (
                                 <Image
@@ -504,18 +513,30 @@ export default function CombosPage() {
                                 </div>
                               )}
                             </div>
+
                             <div className="min-w-0">
-                              <h4 className="font-bold text-slate-900 text-sm truncate">
-                                {item.productName || item.product?.name}
-                              </h4>
-                              <p className="text-xs text-slate-500 font-medium">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-slate-900 text-sm truncate">
+                                  {item.productName || item.product?.name}
+                                </h4>
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                                    isChecked
+                                      ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                      : "bg-slate-100 text-slate-600 border-slate-200"
+                                  }`}
+                                >
+                                  {isChecked ? "✓ Đã chọn mua kèm" : "+ Tùy chọn mua kèm"}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium mt-0.5">
                                 Phụ kiện phối kèm • {formatPrice(itemUnitPrice)}
                               </p>
                             </div>
-                          </label>
+                          </div>
 
                           <div className="text-right shrink-0">
-                            <span className="font-black text-slate-900 text-sm">
+                            <span className={`font-black text-sm transition-colors ${isChecked ? "text-slate-900" : "text-slate-400"}`}>
                               +{formatPrice(itemUnitPrice)}
                             </span>
                           </div>
@@ -523,7 +544,10 @@ export default function CombosPage() {
 
                         {/* If checked and size selector exists */}
                         {isChecked && uniqueSizes.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <div
+                            className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <span className="text-xs font-semibold text-slate-600">
                               Chọn size phụ kiện:
                             </span>
@@ -535,7 +559,8 @@ export default function CombosPage() {
                                   <button
                                     key={size}
                                     type="button"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       if (matchingVariant) {
                                         handleSelectVariant(item.id, matchingVariant);
                                       }
