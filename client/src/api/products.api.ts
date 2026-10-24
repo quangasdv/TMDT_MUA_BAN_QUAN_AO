@@ -164,9 +164,9 @@ export const getProductsApi = async (
     if (params.q) queryParams.q = params.q;
     if (params.category) queryParams.category = params.category;
     else if (params.categoryId) queryParams.category = params.categoryId;
-    if (params.minPrice !== undefined && params.minPrice !== "")
+    if (params.minPrice !== undefined && params.minPrice !== "" && params.minPrice !== null)
       queryParams.minPrice = params.minPrice;
-    if (params.maxPrice !== undefined && params.maxPrice !== "")
+    if (params.maxPrice !== undefined && params.maxPrice !== "" && params.maxPrice !== null)
       queryParams.maxPrice = params.maxPrice;
     if (params.color) queryParams.color = params.color;
     if (params.size) queryParams.size = params.size;
@@ -200,8 +200,27 @@ export const searchProductsApi = async (
 export const filterProductsApi = async (
   params?: FilterProductsParams
 ): Promise<FilterProductsResponse> => {
+  const queryParams: Record<string, string | number | boolean> = {};
+  if (params) {
+    if (params.category) queryParams.category = params.category;
+    if (params.categoryId) queryParams.categoryId = params.categoryId;
+    if (params.minPrice !== undefined && params.minPrice !== "" && params.minPrice !== null) {
+      queryParams.minPrice = params.minPrice;
+    }
+    if (params.maxPrice !== undefined && params.maxPrice !== "" && params.maxPrice !== null) {
+      queryParams.maxPrice = params.maxPrice;
+    }
+    if (params.color) queryParams.color = params.color;
+    if (params.size) queryParams.size = params.size;
+    if (params.inStock !== undefined && params.inStock !== "" && params.inStock !== null) {
+      queryParams.inStock = params.inStock;
+    }
+    if (params.sortBy) queryParams.sortBy = params.sortBy;
+    if (params.page) queryParams.page = params.page;
+    if (params.limit) queryParams.limit = params.limit;
+  }
   const response = await baseAPI.get<FilterProductsResponse>("/products/filter", {
-    params,
+    params: queryParams,
   });
   return response.data;
 };

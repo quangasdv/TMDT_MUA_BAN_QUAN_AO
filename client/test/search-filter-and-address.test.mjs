@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 const API_BASE = "http://localhost:5000/api";
 
@@ -72,16 +74,50 @@ test("Filter API - Live GET /api/products/filter complies with API Documentation
   assert.ok(json.data.pagination, "Pagination metadata phải tồn tại");
 });
 
-// 4. LIVE API TEST: Price & Variant Filter (GET /api/products/filter with minPrice & maxPrice)
-test("Filter API - Price Range and Color filter", async () => {
-  const res = await fetch(
-    `${API_BASE}/products/filter?minPrice=200000&maxPrice=1000000&sortBy=newest&page=1&limit=12`
-  );
-  assert.equal(res.status, 200);
+// 4. LIVE API TEST: Price Filter Presets Verification against Database Products
+test("Filter API - Price Filter Presets (Under 200k, 200k-500k, 500k-1M)", async () => {
+  // Preset 1: Dưới 200.000 ₫ (maxPrice=200000)
+  const under200kRes = await fetch(`${API_BASE}/products/filter?maxPrice=200000`);
+  assert.equal(under200kRes.status, 200);
+  const under200kData = await under200kRes.json();
+  for (const prod of under200kData.data.products) {
+    assert.ok(
+      Number(prod.basePrice) <= 200000,
+      `Sản phẩm ${prod.name} có giá ${prod.basePrice} phải <= 200.000đ`
+    );
+  }
 
-  const json = await res.json();
-  assert.equal(json.success, true);
-  assert.equal(json.data.filtersApplied.minPrice, 200000);
-  assert.equal(json.data.filtersApplied.maxPrice, 1000000);
+  // Preset 2: 200.000 ₫ - 500.000 ₫ (minPrice=200000 & maxPrice=500000)
+  const midRes = await fetch(`${API_BASE}/products/filter?minPrice=200000&maxPrice=500000`);
+  assert.equal(midRes.status, 200);
+  const midData = await midRes.json();
+  assert.ok(midData.data.products.length > 0, "Phải có sản phẩm trong tầm giá 200k - 500k");
+  for (const prod of midData.data.products) {
+    const price = Number(prod.basePrice);
+    assert.ok(
+      price >= 200000 && price <= 500000,
+      `Sản phẩm ${prod.name} có giá ${price} phải trong khoảng [200.000, 500.000]`
+    );
+  }
+
+  // Preset 3: 500.000 ₫ - 1.000.000 ₫ (minPrice=500000 & maxPrice=1000000)
+  const highRes = await fetch(`${API_BASE}/products/filter?minPrice=500000&maxPrice=1000000`);
+  assert.equal(highRes.status, 200);
+  const highData = await highRes.json();
+  assert.ok(highData.data.products.length > 0, "Phải có sản phẩm trong tầm giá 500k - 1M");
+  for (const prod of highData.data.products) {
+    const price = Number(prod.basePrice);
+    assert.ok(
+      price >= 500000 && price <= 1000000,
+      `Sản phẩm ${prod.name} có giá ${price} phải trong khoảng [500.000, 1.000.000]`
+    );
+  }
 });
 
+// 5. ASSET TEST: QR Code Image exists in public directory
+test("Assets - QR Code image exists in public/images/qr.jpg", () => {
+  const qrPath = path.resolve(process.cwd(), "public/images/qr.jpg");
+  assert.ok(fs.existsSync(qrPath), "File public/images/qr.jpg phải tồn tại");
+  const stats = fs.statSync(qrPath);
+  assert.ok(stats.size > 1000, "File qr.jpg phải có dung lượng ảnh hợp lệ (> 1KB)");
+});

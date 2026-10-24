@@ -53,12 +53,23 @@ function ProductsCatalogContent() {
     filters,
     activeFiltersCount,
     setFilter,
+    setPriceRange,
     setPage,
     resetFilters,
   } = useProducts();
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(filters.q);
+  const [customMin, setCustomMin] = useState("");
+  const [customMax, setCustomMax] = useState("");
+
+  const handleApplyCustomPrice = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPriceRange(
+      customMin ? String(customMin).trim() : undefined,
+      customMax ? String(customMax).trim() : undefined
+    );
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,10 +166,7 @@ function ProductsCatalogContent() {
               {filters.maxPrice ? `${Number(filters.maxPrice).toLocaleString()} ₫` : "Tối đa"}
               <button
                 type="button"
-                onClick={() => {
-                  setFilter("minPrice", undefined);
-                  setFilter("maxPrice", undefined);
-                }}
+                onClick={() => setPriceRange(undefined, undefined)}
                 className="hover:text-destructive group-hover:rotate-90 transition-transform cursor-pointer"
               >
                 <X size={12} />
@@ -373,11 +381,9 @@ function ProductsCatalogContent() {
                     type="button"
                     onClick={() => {
                       if (isSelected) {
-                        setFilter("minPrice", undefined);
-                        setFilter("maxPrice", undefined);
+                        setPriceRange(undefined, undefined);
                       } else {
-                        setFilter("minPrice", preset.min || undefined);
-                        setFilter("maxPrice", preset.max || undefined);
+                        setPriceRange(preset.min || undefined, preset.max || undefined);
                       }
                     }}
                     className={cn(
@@ -393,6 +399,35 @@ function ProductsCatalogContent() {
                 );
               })}
             </div>
+
+            {/* Ô nhập khoảng giá tùy chỉnh */}
+            <form onSubmit={handleApplyCustomPrice} className="pt-2.5 border-t border-slate-100 space-y-1.5">
+              <span className="text-[11px] font-semibold text-slate-600 block">Hoặc tự nhập khoảng giá (VNĐ):</span>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  placeholder="Từ ₫"
+                  value={customMin}
+                  onChange={(e) => setCustomMin(e.target.value)}
+                  className="h-8 text-xs bg-white text-slate-900 border-slate-300 px-2"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <Input
+                  type="number"
+                  placeholder="Đến ₫"
+                  value={customMax}
+                  onChange={(e) => setCustomMax(e.target.value)}
+                  className="h-8 text-xs bg-white text-slate-900 border-slate-300 px-2"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="h-8 px-2.5 text-xs bg-slate-900 text-white hover:bg-slate-800 font-bold shrink-0 cursor-pointer"
+                >
+                  Lọc
+                </Button>
+              </div>
+            </form>
           </div>
 
           {/* 3. Lọc theo Màu sắc */}
@@ -561,8 +596,11 @@ function ProductsCatalogContent() {
                       key={idx}
                       type="button"
                       onClick={() => {
-                        setFilter("minPrice", preset.min || undefined);
-                        setFilter("maxPrice", preset.max || undefined);
+                        if (filters.minPrice === preset.min && filters.maxPrice === preset.max) {
+                          setPriceRange(undefined, undefined);
+                        } else {
+                          setPriceRange(preset.min || undefined, preset.max || undefined);
+                        }
                         setMobileFilterOpen(false);
                       }}
                       className={cn(

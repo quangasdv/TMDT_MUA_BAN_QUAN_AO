@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   Loader2,
   QrCode,
+  Banknote,
   Sparkles,
   X,
   ShoppingBag,
@@ -61,6 +62,9 @@ export default function CheckoutPage() {
   } = form;
 
   const shippingAddressValue = watch("shippingAddress");
+
+  // Phương thức thanh toán (VIETQR hoặc COD)
+  const [paymentMethod, setPaymentMethod] = React.useState<"VIETQR" | "COD">("VIETQR");
 
   // Cascading Address Select Boxes state
   const [selectedProvinceId, setSelectedProvinceId] = React.useState<string>("hcm");
@@ -459,36 +463,97 @@ export default function CheckoutPage() {
                 </h2>
               </div>
 
-              {/* Lựa chọn: VietQR Chuyển khoản tức thời */}
-              <div className="relative p-4 rounded-xl border-2 border-primary bg-primary/5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                      <QrCode size={22} />
-                    </div>
-                    <div>
-                      {/* FIX LỖI HYDRATION: Dùng <div> thay vì <p> chứa <Badge> */}
-                      <div className="font-bold text-sm text-foreground flex items-center gap-2">
-                        <span>Quét mã VietQR chuẩn Napas 24/7</span>
-                        <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 bg-emerald-600">
-                          Khuyên dùng
-                        </Badge>
+              <div className="space-y-3">
+                {/* Lựa chọn 1: VietQR Chuyển khoản tức thời */}
+                <div
+                  onClick={() => setPaymentMethod("VIETQR")}
+                  className={cn(
+                    "relative p-4 rounded-xl border-2 transition-all cursor-pointer space-y-2",
+                    paymentMethod === "VIETQR"
+                      ? "border-primary bg-primary/5 shadow-2xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-2xs shrink-0">
+                        <QrCode size={22} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Tự động xác nhận giao dịch trong 3 giây qua PayOS Webhook
-                      </p>
+                      <div>
+                        <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                          <span>Quét mã VietQR chuẩn Napas 24/7</span>
+                          <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4 bg-emerald-600">
+                            Khuyên dùng
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Tự động xác nhận giao dịch trong 3 giây qua PayOS Webhook
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                        paymentMethod === "VIETQR" ? "border-primary" : "border-slate-300"
+                      )}
+                    >
+                      {paymentMethod === "VIETQR" && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                     </div>
                   </div>
-                  <div className="h-5 w-5 rounded-full border-2 border-primary flex items-center justify-center">
-                    <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+
+                  <div className="pt-2 text-[11px] text-muted-foreground border-t border-primary/20 flex items-center gap-1.5">
+                    <ShieldCheck size={12} className="text-primary shrink-0" />
+                    <span>
+                      Sau khi bấm đặt hàng, hệ thống sẽ tạo mã VietQR có sẵn số tài khoản và nội dung chuyển khoản tự động.
+                    </span>
                   </div>
                 </div>
 
-                <div className="pt-2 text-[11px] text-muted-foreground border-t border-primary/20 flex items-center gap-1.5">
-                  <ShieldCheck size={12} className="text-primary shrink-0" />
-                  <span>
-                    Sau khi bấm đặt hàng, hệ thống sẽ tạo mã VietQR có sẵn số tài khoản và nội dung chuyển khoản tự động.
-                  </span>
+                {/* Lựa chọn 2: Thanh toán tiền mặt khi nhận hàng (COD) */}
+                <div
+                  onClick={() => setPaymentMethod("COD")}
+                  className={cn(
+                    "relative p-4 rounded-xl border-2 transition-all cursor-pointer space-y-2",
+                    paymentMethod === "COD"
+                      ? "border-primary bg-primary/5 shadow-2xs"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-2xs shrink-0">
+                        <Banknote size={22} className="text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                          <span>Thanh toán tiền mặt khi nhận hàng (COD)</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-slate-300 text-slate-700 bg-slate-50">
+                            Tiền mặt
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Thanh toán trực tiếp bằng tiền mặt cho shipper khi nhận và kiểm tra hàng
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                        paymentMethod === "COD" ? "border-primary" : "border-slate-300"
+                      )}
+                    >
+                      {paymentMethod === "COD" && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                    </div>
+                  </div>
+
+                  {paymentMethod === "COD" && (
+                    <div className="pt-2 text-[11px] text-slate-600 border-t border-primary/20 flex items-center gap-1.5 animate-in fade-in duration-150">
+                      <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                      <span>
+                        Quý khách được quyền đồng kiểm tra hàng trước khi nhận. Vui lòng chuẩn bị sẵn tiền mặt khi shipper giao tới.
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -695,9 +760,14 @@ export default function CheckoutPage() {
                     <Loader2 size={16} className="animate-spin" />
                     Đang xử lý đặt hàng...
                   </>
+                ) : paymentMethod === "COD" ? (
+                  <>
+                    <span>Đặt hàng (Thanh toán tiền mặt - COD)</span>
+                    <ArrowRight size={16} />
+                  </>
                 ) : (
                   <>
-                    Xác nhận đặt hàng
+                    <span>Tiến hành thanh toán VietQR</span>
                     <ArrowRight size={16} />
                   </>
                 )}

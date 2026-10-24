@@ -184,14 +184,20 @@ export default function PaymentPage({ params }: PaymentPageProps) {
             {/* Mã QR Code Container */}
             <div className="flex flex-col items-center">
               <div className="relative p-3 rounded-2xl bg-white shadow-md border border-border/80 flex items-center justify-center">
-                {isQrLoading || !paymentData?.vietQrUrl ? (
+                {isQrLoading ? (
                   <Skeleton className="h-64 w-64 rounded-xl" />
                 ) : (
                   <div className="relative h-64 w-64 sm:h-72 sm:w-72 flex items-center justify-center">
                     <img
-                      src={paymentData.vietQrUrl}
+                      src="/images/qr.jpg"
                       alt="VietQR Napas TrendyFit"
-                      className="h-full w-full object-contain rounded-lg"
+                      className="h-full w-full object-contain rounded-lg shadow-2xs"
+                      onError={(e) => {
+                        // Fallback sang API URL nếu ảnh local gặp sự cố
+                        if (paymentData?.vietQrUrl) {
+                          (e.target as HTMLImageElement).src = paymentData.vietQrUrl;
+                        }
+                      }}
                     />
                   </div>
                 )}

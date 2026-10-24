@@ -85,8 +85,8 @@ export function useProducts() {
         // Theo tài liệu: GET /api/products/filter (Advanced Filter)
         const res = await filterProductsApi({
           category: category || undefined,
-          minPrice: minPrice || undefined,
-          maxPrice: maxPrice || undefined,
+          minPrice: minPrice ? Number(minPrice) : undefined,
+          maxPrice: maxPrice ? Number(maxPrice) : undefined,
           color: color || undefined,
           size: size || undefined,
           inStock: inStock === "true" || inStock === "1" ? true : undefined,
@@ -103,8 +103,8 @@ export function useProducts() {
         const res = await getProductsApi({
           q: q || undefined,
           category: category || undefined,
-          minPrice: minPrice || undefined,
-          maxPrice: maxPrice || undefined,
+          minPrice: minPrice ? Number(minPrice) : undefined,
+          maxPrice: maxPrice ? Number(maxPrice) : undefined,
           color: color || undefined,
           size: size || undefined,
           page,
@@ -153,6 +153,26 @@ export function useProducts() {
   const setFilter = useCallback(
     (key: keyof ProductFilterParams, value: string | number | boolean | undefined | null) => {
       updateQueryParam({ [key]: value }, true);
+    },
+    [updateQueryParam]
+  );
+
+  const setFilters = useCallback(
+    (updates: Record<string, string | number | boolean | undefined | null>) => {
+      updateQueryParam(updates, true);
+    },
+    [updateQueryParam]
+  );
+
+  const setPriceRange = useCallback(
+    (min?: string | number, max?: string | number) => {
+      updateQueryParam(
+        {
+          minPrice: min !== undefined && min !== "" ? min : undefined,
+          maxPrice: max !== undefined && max !== "" ? max : undefined,
+        },
+        true
+      );
     },
     [updateQueryParam]
   );
@@ -214,6 +234,8 @@ export function useProducts() {
     },
     activeFiltersCount,
     setFilter,
+    setFilters,
+    setPriceRange,
     setPage,
     resetFilters,
   };
