@@ -131,61 +131,61 @@ export const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
 export const ORDER_STATUS_LABELS: Record<string, { label: string; colorClass: string; bgClass: string }> = {
   PENDING_PAYMENT: {
     label: "Chờ thanh toán",
-    colorClass: "text-amber-700 dark:text-amber-300",
-    bgClass: "bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800",
+    colorClass: "text-amber-900",
+    bgClass: "bg-amber-50 border-amber-300",
   },
   PAID: {
     label: "Đã thanh toán",
-    colorClass: "text-blue-700 dark:text-blue-300",
-    bgClass: "bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800",
+    colorClass: "text-emerald-900",
+    bgClass: "bg-emerald-50 border-emerald-300",
   },
   PROCESSING: {
     label: "Đang xử lý",
-    colorClass: "text-indigo-700 dark:text-indigo-300",
-    bgClass: "bg-indigo-50 border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800",
+    colorClass: "text-sky-900",
+    bgClass: "bg-sky-50 border-sky-300",
   },
   SHIPPING: {
     label: "Đang giao hàng",
-    colorClass: "text-purple-700 dark:text-purple-300",
-    bgClass: "bg-purple-50 border-purple-200 dark:bg-purple-950/40 dark:border-purple-800",
+    colorClass: "text-purple-900",
+    bgClass: "bg-purple-50 border-purple-300",
   },
   DELIVERED: {
     label: "Giao thành công",
-    colorClass: "text-emerald-700 dark:text-emerald-300",
-    bgClass: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800",
+    colorClass: "text-teal-900",
+    bgClass: "bg-teal-50 border-teal-300",
   },
   CANCELLED: {
     label: "Đã hủy đơn",
-    colorClass: "text-rose-700 dark:text-rose-300",
-    bgClass: "bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800",
+    colorClass: "text-rose-900",
+    bgClass: "bg-rose-50 border-rose-300",
   },
   PAYMENT_EXPIRED_PENDING_REFUND: {
     label: "Quá hạn (Chờ hoàn)",
-    colorClass: "text-orange-700 dark:text-orange-300",
-    bgClass: "bg-orange-50 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800",
+    colorClass: "text-orange-900",
+    bgClass: "bg-orange-50 border-orange-300",
   },
 };
 
 export const PAYMENT_STATUS_LABELS: Record<string, { label: string; colorClass: string; bgClass: string }> = {
   UNPAID: {
     label: "Chưa thanh toán",
-    colorClass: "text-slate-700 dark:text-slate-300",
-    bgClass: "bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700",
+    colorClass: "text-slate-800",
+    bgClass: "bg-slate-100 border-slate-300",
   },
   PAID: {
     label: "Đã thanh toán",
-    colorClass: "text-emerald-700 dark:text-emerald-300",
-    bgClass: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800",
+    colorClass: "text-emerald-900",
+    bgClass: "bg-emerald-50 border-emerald-300",
   },
   REFUNDED: {
     label: "Đã hoàn tiền",
-    colorClass: "text-cyan-700 dark:text-cyan-300",
-    bgClass: "bg-cyan-50 border-cyan-200 dark:bg-cyan-950/40 dark:border-cyan-800",
+    colorClass: "text-cyan-900",
+    bgClass: "bg-cyan-50 border-cyan-300",
   },
   PAID_EXPIRED: {
     label: "Thanh toán muộn",
-    colorClass: "text-orange-700 dark:text-orange-300",
-    bgClass: "bg-orange-50 border-orange-200 dark:bg-orange-950/40 dark:border-orange-800",
+    colorClass: "text-orange-900",
+    bgClass: "bg-orange-50 border-orange-300",
   },
 };
 

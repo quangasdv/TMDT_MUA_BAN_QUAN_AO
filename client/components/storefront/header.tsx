@@ -14,7 +14,6 @@ import { cn, useIsMounted } from "@/lib/utils";
 import {
   Search,
   ShoppingBag,
-  User,
   Menu,
   X,
   LogOut,
@@ -88,12 +87,6 @@ export function Header() {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-sm font-medium">
           <Link
-            href="/"
-            className="text-foreground/80 hover:text-foreground transition-colors hover:font-semibold"
-          >
-            Trang chủ
-          </Link>
-          <Link
             href="/products"
             className="text-foreground/80 hover:text-foreground transition-colors hover:font-semibold"
           >
@@ -159,13 +152,21 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-1.5 rounded-full border border-border p-1.5 sm:px-3 sm:py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white pl-1.5 pr-2.5 sm:pr-3 py-1 text-xs font-semibold text-slate-800 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-xs"
                 >
-                  <User size={15} className="text-primary" />
-                  <span className="hidden sm:inline-block max-w-[100px] truncate">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-black text-[11px] shadow-xs">
+                    {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                  </span>
+                  <span className="hidden sm:inline-block max-w-[120px] truncate text-slate-900 font-bold">
                     {user.fullName}
                   </span>
-                  <ChevronDown size={13} className="text-muted-foreground" />
+                  <ChevronDown
+                    size={13}
+                    className={cn(
+                      "text-slate-400 transition-transform duration-200",
+                      userMenuOpen && "rotate-180 text-slate-800"
+                    )}
+                  />
                 </button>
 
                 {userMenuOpen && (
@@ -179,43 +180,86 @@ export function Header() {
 
                     {/* Dropdown Menu Container */}
                     <div
-                      className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-white dark:bg-zinc-950 p-2 shadow-xl z-50 text-xs backdrop-blur-none"
+                      className="absolute right-0 mt-2.5 w-64 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-2xl z-50 text-xs animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
                     >
-                      <div className="px-3 py-2 border-b border-border/70 mb-1">
-                        <p className="font-semibold text-foreground truncate">{user.fullName}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
-                        <Badge variant="outline" className="mt-1 text-[10px]">
-                          {user.role}
-                        </Badge>
+                      {/* User Header Profile Card */}
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-black text-sm shadow-xs">
+                            {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-slate-900 truncate text-xs">{user.fullName}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-200/70 text-[10px]">
+                          <span className="text-slate-500 font-medium">Vai trò:</span>
+                          <span
+                            className={cn(
+                              "font-bold px-2 py-0.5 rounded-full uppercase tracking-wider text-[10px]",
+                              user.role === "ADMIN"
+                                ? "bg-purple-100 text-purple-900 border border-purple-300"
+                                : user.role === "STAFF"
+                                ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                : "bg-primary/30 text-slate-900 border border-primary/50"
+                            )}
+                          >
+                            {user.role === "ADMIN" ? "Quản trị viên" : user.role === "STAFF" ? "Nhân viên" : "Khách hàng"}
+                          </span>
+                        </div>
                       </div>
 
-                      {user.role === "ADMIN" && (
+                      {/* Navigation Actions */}
+                      <div className="space-y-1">
+                        {(user.role === "ADMIN" || user.role === "STAFF") && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold transition-all group"
+                          >
+                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-900 text-primary">
+                              <Shield size={13} />
+                            </div>
+                            <span>Trang quản trị ({user.role})</span>
+                          </Link>
+                        )}
+
                         <Link
-                          href="/admin"
+                          href="/orders"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold transition-all group"
                         >
-                          <Shield size={14} className="text-primary" />
-                          Trang quản trị
+                          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-700 group-hover:bg-slate-200">
+                            <ShoppingBag size={13} />
+                          </div>
+                          <span>Đơn hàng của tôi</span>
                         </Link>
-                      )}
 
-                      <Link
-                        href="/orders"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-foreground hover:bg-muted font-medium transition-colors"
-                      >
-                        <ShoppingBag size={14} />
-                        Đơn hàng của tôi
-                      </Link>
+                        <Link
+                          href="/outfits"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold transition-all group"
+                        >
+                          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-700 group-hover:bg-slate-200">
+                            <Layers size={13} />
+                          </div>
+                          <span>Phòng phối đồ 2D</span>
+                        </Link>
+                      </div>
 
+                      <div className="h-px bg-slate-100 my-1.5" />
+
+                      {/* Logout */}
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-destructive hover:bg-destructive/10 font-medium transition-colors cursor-pointer text-left"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-semibold transition-all cursor-pointer text-left"
                       >
-                        <LogOut size={14} />
-                        Đăng xuất
+                        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-100/60 text-rose-600">
+                          <LogOut size={13} />
+                        </div>
+                        <span>Đăng xuất</span>
                       </button>
                     </div>
                   </>
@@ -275,13 +319,6 @@ export function Header() {
           </form>
 
           <div className="flex flex-col gap-2.5 pt-2 text-sm font-medium">
-            <Link
-              href="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1.5 text-foreground hover:text-primary"
-            >
-              Trang chủ
-            </Link>
             <Link
               href="/products"
               onClick={() => setMobileMenuOpen(false)}

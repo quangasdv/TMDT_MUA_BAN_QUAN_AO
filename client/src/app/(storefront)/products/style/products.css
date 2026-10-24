@@ -1,4 +1,4 @@
-/* Products Feature Custom Styling */
+/* Products Feature Custom Styling & Micro-interactions */
 .filter-sidebar-sticky {
   position: sticky;
   top: 96px;
@@ -15,7 +15,42 @@
 }
 
 .filter-sidebar-sticky::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 4px;
 }
 
+/* Tactile filter button click feedback */
+.filter-btn-touch {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, box-shadow;
+}
+
+.filter-btn-touch:active {
+  transform: scale(0.96) !important;
+}
+
+/* Pulsing accent dot for active category */
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.75;
+  }
+}
+
+.accent-dot-pulse {
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+/* Active size pill glow */
+.size-pill-active {
+  box-shadow: 0 4px 14px 0 rgba(210, 239, 53, 0.45);
+}
+
+/* Active color swatch glow */
+.color-swatch-active {
+  box-shadow: 0 3px 12px 0 rgba(15, 23, 42, 0.18);
+}

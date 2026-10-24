@@ -139,7 +139,7 @@ Mỗi khi tạo một trang hoặc tính năng mới trong `src/app/`, bắt bu�
 - Tự viết unit test
 - Kiểm tra toàn bộ API, viết thành 1 bảng trong file testAPI.md, những API nào test rồi sẽ không test nữa
 - Viết file kiểm thử vào folder test
-- Tự chụp màn hình lại, tự sửa theo hình đã chụp nếu thấy không hợp lý theo style
+- Tự chụp màn hình lại, tự sửa lại nếu có lỗi về style hoặc không đồng bộ style
 
 ## 4. Hướng dẫn Đọc Ngữ cảnh (Context Files to Read First)
 

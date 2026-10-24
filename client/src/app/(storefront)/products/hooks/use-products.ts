@@ -5,9 +5,25 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   getProductsApi,
+  searchProductsApi,
+  filterProductsApi,
   getCategoriesApi,
-  GetProductsParams,
+  FilterProductsParams,
 } from "@/api/products.api";
+
+export type ProductFilterParams = {
+  q?: string;
+  category?: string;
+  categoryId?: string;
+  minPrice?: number | string;
+  maxPrice?: number | string;
+  color?: string;
+  size?: string;
+  inStock?: boolean | string;
+  sortBy?: "price_asc" | "price_desc" | "name_asc" | "newest";
+  page?: number | string;
+  limit?: number | string;
+};
 
 export function useProducts() {
   const router = useRouter();
@@ -21,22 +37,20 @@ export function useProducts() {
   const maxPrice = searchParams.get("maxPrice") || "";
   const color = searchParams.get("color") || "";
   const size = searchParams.get("size") || "";
+  const inStock = searchParams.get("inStock") || "";
+  const sortBy = (searchParams.get("sortBy") as FilterProductsParams["sortBy"]) || "newest";
   const page = parseInt(searchParams.get("page") || "1", 10) || 1;
   const limit = parseInt(searchParams.get("limit") || "12", 10) || 12;
 
-  // Gom các tham số gọi API
-  const queryParams: GetProductsParams = useMemo(
-    () => ({
-      q: q || undefined,
-      category: category || undefined,
-      minPrice: minPrice || undefined,
-      maxPrice: maxPrice || undefined,
-      color: color || undefined,
-      size: size || undefined,
-      page,
-      limit,
-    }),
-    [q, category, minPrice, maxPrice, color, size, page, limit]
+  const hasKeyword = Boolean(q.trim());
+  const hasFilters = Boolean(
+    category ||
+    minPrice ||
+    maxPrice ||
+    color ||
+    size ||
+    inStock ||
+    (sortBy && sortBy !== "newest")
   );
 
   // 1. Gọi API Lấy Danh mục
@@ -46,7 +60,7 @@ export function useProducts() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // 2. Gọi API Lấy Danh sách Sản phẩm
+  // 2. Gọi API Lấy Danh sách Sản phẩm phân định rõ Search / Filter / All theo API Documentation
   const {
     data: productsData,
     isLoading: productsLoading,
@@ -55,14 +69,59 @@ export function useProducts() {
     refetch: refetchProducts,
     isPlaceholderData,
   } = useQuery({
-    queryKey: ["products", queryParams],
-    queryFn: () => getProductsApi(queryParams),
+    queryKey: [
+      "products",
+      { q, category, minPrice, maxPrice, color, size, inStock, sortBy, page, limit },
+    ],
+    queryFn: async () => {
+      if (hasKeyword && !hasFilters) {
+        // Theo tài liệu: GET /api/products/search (Keyword Search)
+        const res = await searchProductsApi({ q: q.trim(), page, limit });
+        return {
+          products: res.data.products,
+          pagination: res.data.pagination,
+        };
+      } else if (hasFilters && !hasKeyword) {
+        // Theo tài liệu: GET /api/products/filter (Advanced Filter)
+        const res = await filterProductsApi({
+          category: category || undefined,
+          minPrice: minPrice || undefined,
+          maxPrice: maxPrice || undefined,
+          color: color || undefined,
+          size: size || undefined,
+          inStock: inStock === "true" || inStock === "1" ? true : undefined,
+          sortBy: sortBy || "newest",
+          page,
+          limit,
+        });
+        return {
+          products: res.data.products,
+          pagination: res.data.pagination,
+        };
+      } else {
+        // Kết hợp cả keyword và bộ lọc hoặc danh sách cơ bản: GET /api/products
+        const res = await getProductsApi({
+          q: q || undefined,
+          category: category || undefined,
+          minPrice: minPrice || undefined,
+          maxPrice: maxPrice || undefined,
+          color: color || undefined,
+          size: size || undefined,
+          page,
+          limit,
+        });
+        return {
+          products: res.data.products,
+          pagination: res.data.pagination,
+        };
+      }
+    },
     staleTime: 30 * 1000,
   });
 
   const categories = categoriesData?.data?.categories || [];
-  const products = productsData?.data?.products || [];
-  const pagination = productsData?.data?.pagination || {
+  const products = productsData?.products || [];
+  const pagination = productsData?.pagination || {
     page: 1,
     limit: 12,
     total: 0,
@@ -71,7 +130,7 @@ export function useProducts() {
 
   // Cập nhật tham số URL an toàn
   const updateQueryParam = useCallback(
-    (updates: Record<string, string | number | undefined | null>, resetPage = true) => {
+    (updates: Record<string, string | number | boolean | undefined | null>, resetPage = true) => {
       const current = new URLSearchParams(searchParams.toString());
 
       Object.entries(updates).forEach(([key, value]) => {
@@ -92,7 +151,7 @@ export function useProducts() {
   );
 
   const setFilter = useCallback(
-    (key: keyof GetProductsParams, value: string | number | undefined | null) => {
+    (key: keyof ProductFilterParams, value: string | number | boolean | undefined | null) => {
       updateQueryParam({ [key]: value }, true);
     },
     [updateQueryParam]
@@ -126,8 +185,10 @@ export function useProducts() {
     if (minPrice || maxPrice) count++;
     if (color) count++;
     if (size) count++;
+    if (inStock === "true" || inStock === "1") count++;
+    if (sortBy && sortBy !== "newest") count++;
     return count;
-  }, [q, category, minPrice, maxPrice, color, size]);
+  }, [q, category, minPrice, maxPrice, color, size, inStock, sortBy]);
 
   return {
     categories,
@@ -146,6 +207,8 @@ export function useProducts() {
       maxPrice,
       color,
       size,
+      inStock,
+      sortBy,
       page,
       limit,
     },
@@ -155,4 +218,3 @@ export function useProducts() {
     resetFilters,
   };
 }
-

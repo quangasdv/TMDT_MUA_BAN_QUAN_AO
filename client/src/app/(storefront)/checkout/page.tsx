@@ -25,7 +25,9 @@ import {
   X,
   ShoppingBag,
   PackageOpen,
+  MapPin,
 } from "lucide-react";
+import { VIETNAM_ADDRESSES } from "./data/vietnam-address.data";
 import "./style/checkout.css";
 
 export default function CheckoutPage() {
@@ -55,7 +57,79 @@ export default function CheckoutPage() {
   const {
     register,
     formState: { errors },
+    watch,
   } = form;
+
+  const shippingAddressValue = watch("shippingAddress");
+
+  // Cascading Address Select Boxes state
+  const [selectedProvinceId, setSelectedProvinceId] = React.useState<string>("hcm");
+  const [selectedDistrictId, setSelectedDistrictId] = React.useState<string>("q1");
+  const [selectedWardId, setSelectedWardId] = React.useState<string>("bn");
+  const [streetDetail, setStreetDetail] = React.useState<string>("");
+
+  const currentProvince = VIETNAM_ADDRESSES.find((p) => p.id === selectedProvinceId);
+  const availableDistricts = currentProvince?.districts || [];
+  const currentDistrict = availableDistricts.find((d) => d.id === selectedDistrictId);
+  const availableWards = currentDistrict?.wards || [];
+
+  const updateFullAddress = React.useCallback(
+    (
+      pId: string,
+      dId: string,
+      wId: string,
+      street: string
+    ) => {
+      const prov = VIETNAM_ADDRESSES.find((p) => p.id === pId);
+      const dist = prov?.districts.find((d) => d.id === dId);
+      const ward = dist?.wards.find((w) => w.id === wId);
+
+      const parts: string[] = [];
+      if (street.trim()) parts.push(street.trim());
+      if (ward?.name) parts.push(ward.name);
+      if (dist?.name) parts.push(dist.name);
+      if (prov?.name) parts.push(prov.name);
+
+      const fullStr = parts.join(", ");
+      form.setValue("shippingAddress", fullStr, { shouldValidate: true, shouldDirty: true });
+    },
+    [form]
+  );
+
+  const handleProvinceChange = (pId: string) => {
+    setSelectedProvinceId(pId);
+    const prov = VIETNAM_ADDRESSES.find((p) => p.id === pId);
+    const firstDist = prov?.districts[0]?.id || "";
+    setSelectedDistrictId(firstDist);
+    const firstDistObj = prov?.districts[0];
+    const firstWard = firstDistObj?.wards[0]?.id || "";
+    setSelectedWardId(firstWard);
+    updateFullAddress(pId, firstDist, firstWard, streetDetail);
+  };
+
+  const handleDistrictChange = (dId: string) => {
+    setSelectedDistrictId(dId);
+    const dist = availableDistricts.find((d) => d.id === dId);
+    const firstWard = dist?.wards[0]?.id || "";
+    setSelectedWardId(firstWard);
+    updateFullAddress(selectedProvinceId, dId, firstWard, streetDetail);
+  };
+
+  const handleWardChange = (wId: string) => {
+    setSelectedWardId(wId);
+    updateFullAddress(selectedProvinceId, selectedDistrictId, wId, streetDetail);
+  };
+
+  const handleStreetChange = (val: string) => {
+    setStreetDetail(val);
+    updateFullAddress(selectedProvinceId, selectedDistrictId, selectedWardId, val);
+  };
+
+  useEffect(() => {
+    if (!form.getValues("shippingAddress")) {
+      updateFullAddress(selectedProvinceId, selectedDistrictId, selectedWardId, streetDetail);
+    }
+  }, [form, selectedProvinceId, selectedDistrictId, selectedWardId, streetDetail, updateFullAddress]);
 
   // 1. Kiểm tra trạng thái Authentication
   useEffect(() => {
@@ -249,19 +323,110 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="shippingAddress" className="text-xs font-semibold">
-                  Địa chỉ giao hàng chi tiết <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="shippingAddress"
-                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                  {...register("shippingAddress")}
-                  className={cn(
-                    "h-11 rounded-xl text-sm",
-                    errors.shippingAddress && "border-destructive focus-visible:ring-destructive"
-                  )}
-                />
+              {/* Cascading Address Select Boxes */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+                    <MapPin size={14} className="text-primary" />
+                    Địa chỉ nhận hàng (Chọn khu vực) <span className="text-destructive">*</span>
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    Chọn Tỉnh/Thành, Quận/Huyện và Phường/Xã
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Tỉnh / Thành phố */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700">
+                      Tỉnh / Thành phố
+                    </label>
+                    <select
+                      value={selectedProvinceId}
+                      onChange={(e) => handleProvinceChange(e.target.value)}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-2xs cursor-pointer hover:border-slate-400 transition-all"
+                    >
+                      <option value="">-- Chọn Tỉnh / TP --</option>
+                      {VIETNAM_ADDRESSES.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Quận / Huyện */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700">
+                      Quận / Huyện
+                    </label>
+                    <select
+                      value={selectedDistrictId}
+                      onChange={(e) => handleDistrictChange(e.target.value)}
+                      disabled={!selectedProvinceId}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-2xs cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed hover:border-slate-400 transition-all"
+                    >
+                      <option value="">-- Chọn Quận / Huyện --</option>
+                      {availableDistricts.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Phường / Xã */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700">
+                      Phường / Xã
+                    </label>
+                    <select
+                      value={selectedWardId}
+                      onChange={(e) => handleWardChange(e.target.value)}
+                      disabled={!selectedDistrictId}
+                      className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-2xs cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed hover:border-slate-400 transition-all"
+                    >
+                      <option value="">-- Chọn Phường / Xã --</option>
+                      {availableWards.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Số nhà / Tên đường chi tiết */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-700">
+                    Số nhà, tên đường, tòa nhà (tùy chọn để hoàn thiện địa chỉ)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Ví dụ: Số 123 Đường Nguyễn Huệ hoặc Landmark 81..."
+                    value={streetDetail}
+                    onChange={(e) => handleStreetChange(e.target.value)}
+                    className="h-11 rounded-xl text-sm bg-white text-slate-900 border-slate-300 placeholder:text-slate-400"
+                  />
+                </div>
+
+                {/* Live Address Preview Badge */}
+                {shippingAddressValue && (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-start gap-2.5 text-slate-700 animate-in fade-in duration-150">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-slate-900 font-bold mt-0.5">
+                      <MapPin size={13} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-slate-900 block text-[11px] uppercase tracking-wide">
+                        Địa chỉ giao hàng hoàn chỉnh:
+                      </span>
+                      <span className="text-slate-800 font-medium text-xs break-words">
+                        {shippingAddressValue}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {errors.shippingAddress && (
                   <p className="text-[11px] text-destructive font-medium flex items-center gap-1 mt-1">
                     <AlertCircle size={12} />

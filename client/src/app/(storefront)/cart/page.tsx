@@ -478,25 +478,25 @@ export default function CartPage() {
 
       {/* 4. Confirmation Dialog for Item Deletion */}
       {itemToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/25 dark:bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card text-card-foreground rounded-2xl border border-border p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-white text-slate-900 rounded-2xl border border-slate-200 p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2 text-destructive">
+              <div className="flex items-center gap-2 text-rose-600">
                 <Trash2 size={20} />
-                <h3 className="font-bold text-base text-foreground">Xóa sản phẩm</h3>
+                <h3 className="font-bold text-base text-slate-900">Xóa sản phẩm</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setItemToDelete(null)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Bạn có chắc chắn muốn xóa &quot;
-              <strong className="text-foreground">
+              <strong className="text-slate-900">
                 {itemToDelete.variant?.product?.name}
               </strong>
               &quot; ({itemToDelete.variant?.color} - Size {itemToDelete.variant?.size}) khỏi giỏ hàng?
@@ -507,7 +507,7 @@ export default function CartPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setItemToDelete(null)}
-                className="cursor-pointer"
+                className="cursor-pointer border-slate-200 text-slate-700 hover:bg-slate-50"
               >
                 Hủy bỏ
               </Button>
@@ -515,7 +515,7 @@ export default function CartPage() {
                 variant="destructive"
                 size="sm"
                 onClick={confirmDelete}
-                className="cursor-pointer"
+                className="cursor-pointer bg-rose-600 hover:bg-rose-700 text-white font-bold"
               >
                 Xác nhận xóa
               </Button>
