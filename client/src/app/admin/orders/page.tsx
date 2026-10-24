@@ -10,6 +10,8 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "../validation/admin.validation";
 import {
+  RotateCcw,
+  AlertTriangle,
   Package,
   Search,
   RefreshCw,
@@ -20,7 +22,6 @@ import {
   ChevronRight,
   User,
   X,
-  AlertTriangle,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const STATUS_FILTER_TABS = [
   { key: "ALL", label: "Tất cả" },
   { key: "PENDING_PAYMENT", label: "Chờ thanh toán" },
-  { key: "PAID", label: "Đã thanh toán" },
+  { key: "PAID", label: "Chờ xử lý" },
   { key: "PROCESSING", label: "Đang xử lý" },
   { key: "SHIPPING", label: "Đang giao" },
   { key: "DELIVERED", label: "Đã giao" },
@@ -58,6 +59,8 @@ export default function AdminOrdersPage() {
     setTargetStatus,
     isUpdating,
     updateStatus,
+    isRefunding,
+    confirmRefund,
   } = useAdminOrders();
 
   const handleOpenStatusModal = (order: AdminOrder) => {
@@ -342,6 +345,18 @@ export default function AdminOrdersPage() {
                             <Eye size={13} />
                             Chi tiết
                           </Button>
+                          {order.paymentStatus === "PENDING_REFUND" && (
+                            <Button
+                              size="sm"
+                              onClick={() => confirmRefund(order.id)}
+                              disabled={isRefunding}
+                              className="h-8 px-2.5 text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-xs cursor-pointer gap-1"
+                              title="Xác nhận đã chuyển khoản hoàn tiền cho khách"
+                            >
+                              <RotateCcw size={12} className={isRefunding ? "animate-spin" : ""} />
+                              Hoàn tiền
+                            </Button>
+                          )}
                           {validTransitions.length > 0 && (
                             <Button
                               size="sm"
@@ -659,6 +674,30 @@ export default function AdminOrdersPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Alert Hoàn tiền trong Modal Chi tiết nếu PENDING_REFUND */}
+              {selectedOrderForDetail.paymentStatus === "PENDING_REFUND" && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={18} className="text-amber-600 shrink-0" />
+                    <div>
+                      <p className="font-bold">Đơn hàng này đang chờ hoàn tiền cho khách</p>
+                      <p className="text-[11px] text-amber-700 font-medium">
+                        Sau khi đã chuyển khoản trả lại tiền cho khách hàng, bấm nút bên cạnh để xác nhận.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => confirmRefund(selectedOrderForDetail.id)}
+                    disabled={isRefunding}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 shadow-xs cursor-pointer gap-1.5 self-start sm:self-auto"
+                  >
+                    <RotateCcw size={13} className={isRefunding ? "animate-spin" : ""} />
+                    {isRefunding ? "Đang xử lý..." : "Xác nhận đã hoàn tiền"}
+                  </Button>
+                </div>
+              )}
 
               {/* Close Button */}
               <div className="flex justify-end pt-2 border-t border-slate-200">

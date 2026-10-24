@@ -133,7 +133,48 @@ export class CheckoutController {
         }
       }
 
-      const finalAmount = totalAmount - discountAmount;
+      // Tính phí vận chuyển theo chính sách phân vùng địa lý của TrendyFit:
+      // - Đơn hàng >= 499.000 đ: Miễn phí vận chuyển (Freeship 0 đ)
+      // - Đơn hàng < 499.000 đ:
+      //   + Nội thành TP.HCM (Kho shop): 20.000 đ
+      //   + Miền Nam lân cận (Bình Dương, Đồng Nai, Cần Thơ...): 25.000 đ
+      //   + Miền Trung & Miền Bắc: 35.000 đ
+      let shippingFee = 0;
+      if (totalAmount < 499000) {
+        const addr = shippingAddress.toLowerCase();
+        if (
+          addr.includes("hồ chí minh") ||
+          addr.includes("ho chi minh") ||
+          addr.includes("hcm") ||
+          addr.includes("sài gòn")
+        ) {
+          shippingFee = 20000;
+        } else if (
+          addr.includes("bình dương") ||
+          addr.includes("đồng nai") ||
+          addr.includes("bà rịa") ||
+          addr.includes("vũng tàu") ||
+          addr.includes("cần thơ") ||
+          addr.includes("long an") ||
+          addr.includes("tiền giang") ||
+          addr.includes("tây ninh") ||
+          addr.includes("bến tre") ||
+          addr.includes("vĩnh long") ||
+          addr.includes("hậu giang") ||
+          addr.includes("sóc trăng") ||
+          addr.includes("đồng tháp") ||
+          addr.includes("an giang") ||
+          addr.includes("kiên giang") ||
+          addr.includes("bạc liêu") ||
+          addr.includes("cà mau")
+        ) {
+          shippingFee = 25000;
+        } else {
+          shippingFee = 35000;
+        }
+      }
+
+      const finalAmount = totalAmount - discountAmount + shippingFee;
       const orderCode = Math.floor(100000 + Math.random() * 900000); // 6 số ngẫu nhiên
 
       // Thực thi Transaction nguyên tử

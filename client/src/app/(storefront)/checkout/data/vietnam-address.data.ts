@@ -593,3 +593,90 @@ export const VIETNAM_ADDRESSES: ProvinceItem[] = [
   },
 ];
 
+
+/**
+ * Chính sách phí vận chuyển động theo phân vùng địa lý (TrendyFit Dynamic Shipping Rate)
+ */
+export interface ShippingRate {
+  fee: number;
+  estimatedDelivery: string;
+  zoneName: string;
+}
+
+export const FREE_SHIPPING_THRESHOLD = 499000;
+
+export function getShippingRateByProvince(
+  provinceIdOrName?: string | null,
+  subtotalPrice: number = 0
+): ShippingRate {
+  // 1. Chính sách khuyến mãi: Đơn hàng từ 499.000 đ trở lên được FREESHIP toàn quốc
+  if (subtotalPrice >= FREE_SHIPPING_THRESHOLD) {
+    return {
+      fee: 0,
+      estimatedDelivery: "Giao 1 - 3 ngày",
+      zoneName: "Miễn phí vận chuyển (Đơn ≥ 499k)",
+    };
+  }
+
+  if (!provinceIdOrName) {
+    return {
+      fee: 30000,
+      estimatedDelivery: "Giao 2 - 3 ngày",
+      zoneName: "Giao hàng tiêu chuẩn",
+    };
+  }
+
+  const p = provinceIdOrName.toLowerCase();
+
+  // 2. Phân vùng 1: Nội thành TP.HCM (Nơi đặt kho chính của TrendyFit) -> Phí ship 20.000 đ
+  if (
+    p === "hcm" ||
+    p.includes("hồ chí minh") ||
+    p.includes("ho chi minh") ||
+    p.includes("hcm") ||
+    p.includes("sài gòn")
+  ) {
+    return {
+      fee: 20000,
+      estimatedDelivery: "Giao nhanh 1 - 2 ngày",
+      zoneName: "Nội thành TP.HCM",
+    };
+  }
+
+  // 3. Phân vùng 2: Các tỉnh miền Nam lân cận -> Phí ship 25.000 đ
+  if (
+    p === "bd" ||
+    p === "dong-nai" ||
+    p === "ba-ria-vung-tau" ||
+    p === "ct" ||
+    p.includes("bình dương") ||
+    p.includes("đồng nai") ||
+    p.includes("vũng tàu") ||
+    p.includes("cần thơ") ||
+    p.includes("long an") ||
+    p.includes("tiền giang") ||
+    p.includes("tây ninh") ||
+    p.includes("bến tre") ||
+    p.includes("vĩnh long") ||
+    p.includes("hậu giang") ||
+    p.includes("sóc trăng") ||
+    p.includes("đồng tháp") ||
+    p.includes("an giang") ||
+    p.includes("kiên giang") ||
+    p.includes("bạc liêu") ||
+    p.includes("cà mau")
+  ) {
+    return {
+      fee: 25000,
+      estimatedDelivery: "Giao 2 - 3 ngày",
+      zoneName: "Miền Nam lân cận",
+    };
+  }
+
+  // 4. Phân vùng 3: Miền Trung & Miền Bắc (Hà Nội, Đà Nẵng, Hải Phòng...) -> Phí ship 35.000 đ
+  return {
+    fee: 35000,
+    estimatedDelivery: "Giao 3 - 4 ngày",
+    zoneName: "Miền Trung & Miền Bắc",
+  };
+}

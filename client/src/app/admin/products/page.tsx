@@ -17,7 +17,11 @@ import {
   Layers,
   Trash2,
   Tag,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
+import { uploadImageApi } from "../api/admin.api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "react-toastify";
@@ -54,6 +58,74 @@ export default function AdminProductsPage() {
     deleteProduct,
     isDeleting,
   } = useAdminProducts();
+
+  // Upload states
+  const [isUploadingEditImage, setIsUploadingEditImage] = React.useState(false);
+  const [uploadingVariantIndex, setUploadingVariantIndex] = React.useState<number | null>(null);
+  const [isUploadingMainImage, setIsUploadingMainImage] = React.useState(false);
+
+  // Upload handler for Edit Modal
+  const handleUploadEditImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingEditImage(true);
+      const url = await uploadImageApi(file);
+      setUpdateForm((prev) => ({ ...prev, imageUrl: url }));
+      toast.success("Tải ảnh sản phẩm thành công!");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lỗi khi tải ảnh lên.";
+      toast.error(msg);
+    } finally {
+      setIsUploadingEditImage(false);
+      e.target.value = "";
+    }
+  };
+
+  // Upload handler for variant in Create Modal
+  const handleUploadVariantImage = async (
+    idx: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingVariantIndex(idx);
+      const url = await uploadImageApi(file);
+      handleUpdateVariantField(idx, "imageUrl", url);
+      toast.success(`Đã tải ảnh cho biến thể #${idx + 1}!`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lỗi khi tải ảnh lên.";
+      toast.error(msg);
+    } finally {
+      setUploadingVariantIndex(null);
+      e.target.value = "";
+    }
+  };
+
+  // Upload main image for all variants in Create Modal
+  const handleUploadMainCreateImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingMainImage(true);
+      const url = await uploadImageApi(file);
+      setCreateForm((prev) => ({
+        ...prev,
+        variants: prev.variants.map((v) => ({
+          ...v,
+          imageUrl: v.imageUrl || url,
+        })),
+      }));
+      toast.success("Đã tải ảnh và áp dụng cho các biến thể!");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lỗi khi tải ảnh lên.";
+      toast.error(msg);
+    } finally {
+      setIsUploadingMainImage(false);
+      e.target.value = "";
+    }
+  };
 
   // Handle auto-generating slug from name
   const handleNameChange = (name: string) => {
@@ -150,12 +222,14 @@ export default function AdminProductsPage() {
   // Open Edit Modal
   const handleOpenEdit = (product: AdminProduct) => {
     setEditingProduct(product);
+    const primaryImg = product.variants?.[0]?.imageUrl || "";
     setUpdateForm({
       name: product.name,
       description: product.description || "",
       basePrice: Number(product.basePrice),
       categoryId: product.categoryId,
       isActive: product.isActive,
+      imageUrl: primaryImg,
     });
   };
 
@@ -167,6 +241,7 @@ export default function AdminProductsPage() {
     updateProduct(editingProduct.id, {
       ...updateForm,
       basePrice: Number(updateForm.basePrice),
+      imageUrl: updateForm.imageUrl,
     });
   };
 
@@ -569,6 +644,38 @@ export default function AdminProductsPage() {
 
                 {/* Variants Section */}
                 <div className="space-y-3 pt-2 border-t border-slate-200">
+                  {/* Quick Upload Main Image */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700 shadow-2xs">
+                        <ImageIcon size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          Tải ảnh sản phẩm từ máy tính (Áp dụng chung)
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          Ảnh tải lên sẽ tự động điền vào các biến thể chưa có ảnh
+                        </p>
+                      </div>
+                    </div>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer transition shadow-2xs self-start sm:self-auto shrink-0">
+                      {isUploadingMainImage ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Upload size={13} />
+                      )}
+                      <span>{isUploadingMainImage ? "Đang tải ảnh..." : "Chọn ảnh từ máy"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={isUploadingMainImage}
+                        onChange={handleUploadMainCreateImage}
+                      />
+                    </label>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
@@ -684,26 +791,57 @@ export default function AdminProductsPage() {
                           />
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={v.imageUrl || ""}
-                            onChange={(e) =>
-                              handleUpdateVariantField(idx, "imageUrl", e.target.value)
-                            }
-                            placeholder="URL ảnh"
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-[11px]"
-                          />
-                          {createForm.variants.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveVariant(idx)}
-                              className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
-                              title="Xóa biến thể"
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Hình ảnh biến thể
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            {v.imageUrl ? (
+                              <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-slate-300 bg-white shrink-0 group shadow-2xs">
+                                <img
+                                  src={v.imageUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : null}
+                            <label
+                              className="p-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 cursor-pointer transition shrink-0"
+                              title="Tải ảnh biến thể này từ máy"
                             >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
+                              {uploadingVariantIndex === idx ? (
+                                <Loader2 size={14} className="animate-spin text-slate-900" />
+                              ) : (
+                                <Upload size={14} />
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingVariantIndex === idx}
+                                onChange={(e) => handleUploadVariantImage(idx, e)}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={v.imageUrl || ""}
+                              onChange={(e) =>
+                                handleUpdateVariantField(idx, "imageUrl", e.target.value)
+                              }
+                              placeholder="URL ảnh..."
+                              className="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-[11px]"
+                            />
+                            {createForm.variants.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveVariant(idx)}
+                                className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
+                                title="Xóa biến thể"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -840,6 +978,67 @@ export default function AdminProductsPage() {
                     }
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
                   />
+                </div>
+
+                {/* Section Đổi Hình Ảnh Sản Phẩm */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-800">
+                    Hình ảnh sản phẩm
+                  </label>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/80">
+                    {updateForm.imageUrl ? (
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-300 bg-white shrink-0 shadow-2xs">
+                        <img
+                          src={updateForm.imageUrl}
+                          alt="Ảnh sản phẩm"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl border border-dashed border-slate-300 bg-white flex flex-col items-center justify-center text-slate-400 shrink-0">
+                        <ImageIcon size={22} />
+                        <span className="text-[10px] mt-0.5 font-medium">Chưa có ảnh</span>
+                      </div>
+                    )}
+
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold cursor-pointer hover:bg-slate-800 transition shadow-2xs">
+                          {isUploadingEditImage ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Upload size={13} />
+                          )}
+                          <span>{isUploadingEditImage ? "Đang tải ảnh..." : "Tải ảnh mới từ máy"}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={isUploadingEditImage}
+                            onChange={handleUploadEditImage}
+                          />
+                        </label>
+                        {updateForm.imageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setUpdateForm((prev) => ({ ...prev, imageUrl: "" }))}
+                            className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-1.5 py-1"
+                          >
+                            Xóa ảnh
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={updateForm.imageUrl || ""}
+                        onChange={(e) =>
+                          setUpdateForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                        }
+                        placeholder="Hoặc dán trực tiếp link URL ảnh..."
+                        className="w-full px-2.5 py-1 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-2">

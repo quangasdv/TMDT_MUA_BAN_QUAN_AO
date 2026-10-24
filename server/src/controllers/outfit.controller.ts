@@ -21,15 +21,23 @@ export class OutfitController {
         },
       });
 
+      const CLOTHING_SLOTS = ["TOP", "BOTTOM", "OUTERWEAR"];
+
       const combos = outfits.map((outfit) => {
-        let originalPrice = 0;
+        let clothingOriginalPrice = 0;
+        let totalOriginalPrice = 0;
+
         const formattedItems = outfit.items.map((item) => {
           const unitPrice =
             Number(item.variant.product.basePrice) + Number(item.variant.priceAdjustment);
-          originalPrice += unitPrice;
+          totalOriginalPrice += unitPrice;
+          if (CLOTHING_SLOTS.includes(item.slotType)) {
+            clothingOriginalPrice += unitPrice;
+          }
+
           return {
             id: item.id,
-            slotType: item.slotType, // TOP (Áo) hoặc BOTTOM (Quần)
+            slotType: item.slotType, // TOP (Áo), BOTTOM (Quần), OUTERWEAR (Áo khoác), SHOES (Giày), ACCESSORY (Phụ kiện)
             productId: item.variant.productId,
             productName: item.variant.product.name,
             productSlug: item.variant.product.slug,
@@ -44,9 +52,13 @@ export class OutfitController {
           };
         });
 
+        // Quy tắc Combo: Giá gói cố định chỉ áp dụng cho nhóm Quần Áo (TOP, BOTTOM, OUTERWEAR).
+        // Giày dép và phụ kiện là tùy chọn phối kèm bán riêng, không tính vào giá gói combo.
+        const baseComboOriginalPrice =
+          clothingOriginalPrice > 0 ? clothingOriginalPrice : totalOriginalPrice;
         const discountRate = outfit.discountRate || 0.15; // Mặc định giảm 15% khi mua cả combo
-        const comboPrice = Math.round(originalPrice * (1 - discountRate));
-        const savedAmount = originalPrice - comboPrice;
+        const comboPrice = Math.round(baseComboOriginalPrice * (1 - discountRate));
+        const savedAmount = baseComboOriginalPrice - comboPrice;
 
         return {
           id: outfit.id,
@@ -55,9 +67,11 @@ export class OutfitController {
           bannerUrl: outfit.bannerUrl,
           discountRate,
           discountPercent: Math.round(discountRate * 100),
-          originalPrice,
+          originalPrice: baseComboOriginalPrice,
           comboPrice,
           savedAmount,
+          clothingOriginalPrice,
+          totalOriginalPrice,
           items: formattedItems,
         };
       });
@@ -110,14 +124,21 @@ export class OutfitController {
         return;
       }
 
-      let originalPrice = 0;
+      const CLOTHING_SLOTS = ["TOP", "BOTTOM", "OUTERWEAR"];
+      let clothingOriginalPrice = 0;
+      let totalOriginalPrice = 0;
+
       const formattedItems = outfit.items.map((item) => {
         const unitPrice =
           Number(item.variant.product.basePrice) + Number(item.variant.priceAdjustment);
-        originalPrice += unitPrice;
+        totalOriginalPrice += unitPrice;
+        if (CLOTHING_SLOTS.includes(item.slotType)) {
+          clothingOriginalPrice += unitPrice;
+        }
+
         return {
           id: item.id,
-          slotType: item.slotType, // TOP hoặc BOTTOM
+          slotType: item.slotType, // TOP, BOTTOM, OUTERWEAR, SHOES, ACCESSORY
           product: {
             id: item.variant.product.id,
             name: item.variant.product.name,
@@ -138,9 +159,11 @@ export class OutfitController {
         };
       });
 
+      const baseComboOriginalPrice =
+        clothingOriginalPrice > 0 ? clothingOriginalPrice : totalOriginalPrice;
       const discountRate = outfit.discountRate || 0.15;
-      const comboPrice = Math.round(originalPrice * (1 - discountRate));
-      const savedAmount = originalPrice - comboPrice;
+      const comboPrice = Math.round(baseComboOriginalPrice * (1 - discountRate));
+      const savedAmount = baseComboOriginalPrice - comboPrice;
 
       res.status(200).json({
         success: true,
@@ -152,9 +175,11 @@ export class OutfitController {
             bannerUrl: outfit.bannerUrl,
             discountRate,
             discountPercent: Math.round(discountRate * 100),
-            originalPrice,
+            originalPrice: baseComboOriginalPrice,
             comboPrice,
             savedAmount,
+            clothingOriginalPrice,
+            totalOriginalPrice,
             items: formattedItems,
           },
         },

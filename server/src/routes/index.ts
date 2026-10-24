@@ -8,6 +8,7 @@ import paymentRoutes from "./payment.routes";
 import fitAdvisorRoutes from "./fitAdvisor.routes";
 import outfitRoutes from "./outfit.routes";
 import adminRoutes from "./admin.routes";
+import uploadRoutes from "./upload.routes";
 
 const apiRouter = Router();
 
@@ -20,5 +21,6 @@ apiRouter.use("/", paymentRoutes);
 apiRouter.use("/", fitAdvisorRoutes);
 apiRouter.use("/", outfitRoutes);
 apiRouter.use("/", adminRoutes);
+apiRouter.use("/", uploadRoutes);
 
 export default apiRouter;

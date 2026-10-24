@@ -179,13 +179,24 @@ export class AdminController {
         });
       }
 
-      // Nếu đơn bị hủy khi đang PROCESSING hoặc PAID, hoàn trả số lượng tồn kho
-      if (status === "CANCELLED" && (order.status === "PROCESSING" || order.status === "PAID")) {
-        const orderItems = await prisma.orderItem.findMany({ where: { orderId: id } });
-        for (const item of orderItems) {
-          await prisma.productVariant.update({
-            where: { id: item.variantId },
-            data: { stockQuantity: { increment: item.quantity } },
+      // QUY CHUẨN HOÀN TIỀN & HOÀN KHO (HƯỚNG A):
+      if (status === "CANCELLED") {
+        // Hoàn trả số lượng tồn kho nếu đơn đã từng rời khỏi PENDING_PAYMENT
+        if (order.status === "PROCESSING" || order.status === "PAID" || order.status === "SHIPPING") {
+          const orderItems = await prisma.orderItem.findMany({ where: { orderId: id } });
+          for (const item of orderItems) {
+            await prisma.productVariant.update({
+              where: { id: item.variantId },
+              data: { stockQuantity: { increment: item.quantity } },
+            });
+          }
+        }
+
+        // Nếu đơn hàng trước đó ĐÃ THANH TOÁN (PAID), tự động chuyển sang CHỜ HOÀN TIỀN (PENDING_REFUND)
+        if (order.paymentStatus === "PAID") {
+          await prisma.order.update({
+            where: { id },
+            data: { paymentStatus: "PENDING_REFUND" },
           });
         }
       }
@@ -195,6 +206,59 @@ export class AdminController {
       res.status(200).json({
         success: true,
         message: `Đã cập nhật trạng thái đơn hàng sang ${status}.`,
+        data: { order: updatedOrder },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Xác nhận hoàn tiền đơn hàng (ADMIN & STAFF) - Hướng A
+   * PATCH /api/admin/orders/:id/refund
+   */
+  static async confirmOrderRefund(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const order = await prisma.order.findUnique({
+        where: { id },
+      });
+
+      if (!order) {
+        res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        return;
+      }
+
+      if (order.status !== "CANCELLED") {
+        res.status(400).json({
+          success: false,
+          message: "Chỉ có thể xác nhận hoàn tiền cho đơn hàng đã bị hủy.",
+        });
+        return;
+      }
+
+      if (order.paymentStatus === "REFUNDED") {
+        res.status(400).json({
+          success: false,
+          message: "Đơn hàng này đã được xác nhận hoàn tiền trước đó rồi.",
+        });
+        return;
+      }
+
+      const updatedOrder = await prisma.order.update({
+        where: { id },
+        data: { paymentStatus: "REFUNDED" },
+      });
+
+      await prisma.paymentTransaction.updateMany({
+        where: { orderId: id },
+        data: { status: "REFUNDED" },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Xác nhận hoàn tiền cho đơn hàng thành công!",
         data: { order: updatedOrder },
       });
     } catch (error) {
@@ -838,4 +902,302 @@ export class AdminController {
     }
   }
 
+
+  /**
+   * 6. Quản lý Combo thời trang / Outfits (Chỉ ADMIN)
+   */
+  static async getOutfits(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const outfits = await prisma.outfit.findMany({
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: { product: true },
+              },
+            },
+          },
+        },
+        orderBy: { id: "desc" },
+      });
+
+      const CLOTHING_SLOTS = ["TOP", "BOTTOM", "OUTERWEAR"];
+
+      const formatted = outfits.map((outfit) => {
+        let clothingOriginalPrice = 0;
+        let totalOriginalPrice = 0;
+
+        const items = outfit.items.map((item) => {
+          const unitPrice =
+            Number(item.variant.product.basePrice) + Number(item.variant.priceAdjustment);
+          totalOriginalPrice += unitPrice;
+          if (CLOTHING_SLOTS.includes(item.slotType)) {
+            clothingOriginalPrice += unitPrice;
+          }
+          return {
+            id: item.id,
+            slotType: item.slotType,
+            variantId: item.variantId,
+            productId: item.variant.productId,
+            productName: item.variant.product.name,
+            sku: item.variant.sku,
+            color: item.variant.color,
+            size: item.variant.size,
+            imageUrl: item.variant.imageUrl || "",
+            price: unitPrice,
+          };
+        });
+
+        const baseComboPrice = clothingOriginalPrice > 0 ? clothingOriginalPrice : totalOriginalPrice;
+        const discountRate = outfit.discountRate || 0.15;
+        const comboPrice = Math.round(baseComboPrice * (1 - discountRate));
+        const savedAmount = baseComboPrice - comboPrice;
+
+        return {
+          id: outfit.id,
+          title: outfit.title,
+          description: outfit.description,
+          bannerUrl: outfit.bannerUrl,
+          discountRate,
+          discountPercent: Math.round(discountRate * 100),
+          isActive: outfit.isActive,
+          originalPrice: baseComboPrice,
+          comboPrice,
+          savedAmount,
+          clothingOriginalPrice,
+          totalOriginalPrice,
+          items,
+        };
+      });
+
+      res.status(200).json({
+        success: true,
+        data: { outfits: formatted },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async createOutfit(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { title, description, bannerUrl, discountRate, isActive, items } = req.body;
+
+      if (!title || typeof title !== "string" || !title.trim()) {
+        res.status(400).json({ success: false, message: "Tên Combo không được để trống." });
+        return;
+      }
+
+      if (!Array.isArray(items) || items.length < 2) {
+        res.status(400).json({
+          success: false,
+          message: "Combo cần tối thiểu 2 món đồ (ví dụ: Áo và Quần).",
+        });
+        return;
+      }
+
+      const rate = Number(discountRate);
+      if (isNaN(rate) || rate < 0 || rate > 0.8) {
+        res.status(400).json({
+          success: false,
+          message: "Tỷ lệ giảm giá phải nằm trong khoảng từ 0% đến 80% (0 đến 0.8).",
+        });
+        return;
+      }
+
+      const variantIds = items.map((it: any) => it.variantId).filter(Boolean);
+      const existingVariants = await prisma.productVariant.findMany({
+        where: { id: { in: variantIds } },
+        select: { id: true },
+      });
+
+      if (existingVariants.length !== variantIds.length) {
+        res.status(400).json({
+          success: false,
+          message: "Một số biến thể sản phẩm được chọn không tồn tại trong hệ thống.",
+        });
+        return;
+      }
+
+      const outfit = await prisma.outfit.create({
+        data: {
+          title: title.trim(),
+          description: description ? String(description).trim() : null,
+          bannerUrl: bannerUrl ? String(bannerUrl).trim() : null,
+          discountRate: rate,
+          isActive: isActive !== undefined ? Boolean(isActive) : true,
+          items: {
+            create: items.map((it: any) => ({
+              variantId: it.variantId,
+              slotType: it.slotType || "TOP",
+            })),
+          },
+        },
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: { product: true },
+              },
+            },
+          },
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Đã tạo Combo thời trang "${outfit.title}" thành công!`,
+        data: { outfit },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateOutfit(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { title, description, bannerUrl, discountRate, isActive, items } = req.body;
+
+      const existingOutfit = await prisma.outfit.findUnique({ where: { id } });
+      if (!existingOutfit) {
+        res.status(404).json({ success: false, message: "Không tìm thấy Combo yêu cầu." });
+        return;
+      }
+
+      const updateData: any = {};
+      if (title !== undefined) {
+        if (!title.trim()) {
+          res.status(400).json({ success: false, message: "Tên Combo không được để trống." });
+          return;
+        }
+        updateData.title = title.trim();
+      }
+
+      if (description !== undefined) {
+        updateData.description = description ? String(description).trim() : null;
+      }
+
+      if (bannerUrl !== undefined) {
+        updateData.bannerUrl = bannerUrl ? String(bannerUrl).trim() : null;
+      }
+
+      if (discountRate !== undefined) {
+        const rate = Number(discountRate);
+        if (isNaN(rate) || rate < 0 || rate > 0.8) {
+          res.status(400).json({
+            success: false,
+            message: "Tỷ lệ giảm giá phải nằm trong khoảng từ 0% đến 80% (0 đến 0.8).",
+          });
+          return;
+        }
+        updateData.discountRate = rate;
+      }
+
+      if (isActive !== undefined) {
+        updateData.isActive = Boolean(isActive);
+      }
+
+      if (Array.isArray(items) && items.length > 0) {
+        if (items.length < 2) {
+          res.status(400).json({
+            success: false,
+            message: "Combo cần tối thiểu 2 món đồ.",
+          });
+          return;
+        }
+
+        const variantIds = items.map((it: any) => it.variantId).filter(Boolean);
+        const existingVariants = await prisma.productVariant.findMany({
+          where: { id: { in: variantIds } },
+          select: { id: true },
+        });
+
+        if (existingVariants.length !== variantIds.length) {
+          res.status(400).json({
+            success: false,
+            message: "Một số biến thể sản phẩm được chọn không tồn tại.",
+          });
+          return;
+        }
+
+        const updated = await prisma.$transaction(async (tx) => {
+          await tx.outfitItem.deleteMany({ where: { outfitId: id } });
+          return tx.outfit.update({
+            where: { id },
+            data: {
+              ...updateData,
+              items: {
+                create: items.map((it: any) => ({
+                  variantId: it.variantId,
+                  slotType: it.slotType || "TOP",
+                })),
+              },
+            },
+            include: {
+              items: {
+                include: {
+                  variant: {
+                    include: { product: true },
+                  },
+                },
+              },
+            },
+          });
+        });
+
+        res.status(200).json({
+          success: true,
+          message: "Cập nhật Combo thời trang thành công!",
+          data: { outfit: updated },
+        });
+        return;
+      }
+
+      const updated = await prisma.outfit.update({
+        where: { id },
+        data: updateData,
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: { product: true },
+              },
+            },
+          },
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Cập nhật Combo thời trang thành công!",
+        data: { outfit: updated },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteOutfit(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const existingOutfit = await prisma.outfit.findUnique({ where: { id } });
+      if (!existingOutfit) {
+        res.status(404).json({ success: false, message: "Không tìm thấy Combo." });
+        return;
+      }
+
+      await prisma.$transaction([
+        prisma.outfitItem.deleteMany({ where: { outfitId: id } }),
+        prisma.outfit.delete({ where: { id } }),
+      ]);
+
+      res.status(200).json({
+        success: true,
+        message: `Đã xóa Combo "${existingOutfit.title}" thành công!`,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

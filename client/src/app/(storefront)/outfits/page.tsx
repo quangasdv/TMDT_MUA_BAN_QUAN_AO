@@ -137,6 +137,10 @@ export default function CombosPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {combos.map((combo: Combo) => {
                 const isSelected = combo.id === selectedComboId;
+                // Nếu là combo đang được chọn, ưu tiên lấy giá động theo biến thể người dùng đã chọn
+                const displayComboPrice = isSelected ? pricing.clothingComboPrice : combo.comboPrice;
+                const displayOriginalPrice = isSelected ? pricing.clothingOriginalPrice : combo.originalPrice;
+
                 return (
                   <button
                     key={combo.id}
@@ -163,10 +167,10 @@ export default function CombosPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xs font-black text-slate-900">
-                          {formatPrice(combo.comboPrice)}
+                          {formatPrice(displayComboPrice)}
                         </span>
                         <span className="text-[11px] text-slate-400 line-through">
-                          {formatPrice(combo.originalPrice)}
+                          {formatPrice(displayOriginalPrice)}
                         </span>
                       </div>
                     </div>

@@ -22,7 +22,6 @@ import {
   Minus,
   Plus,
   X,
-  Layers,
   ChevronRight,
   Truck,
   RotateCcw,
@@ -480,17 +479,6 @@ export default function ProductDetailPage() {
                 </Button>
               </div>
 
-              {/* 2D Outfit Canvas Shortcut */}
-              <Link
-                href="/outfits"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "w-full text-xs gap-2 h-10 font-semibold rounded-xl border-dashed"
-                )}
-              >
-                <Layers size={14} />
-                Thử phối đồ tại phòng phối 2D (Outfit Canvas)
-              </Link>
             </div>
 
             {/* Shipping & Authentic Guarantee Perks */}

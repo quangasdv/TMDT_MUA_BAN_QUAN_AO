@@ -55,6 +55,7 @@ export function useAdminProducts() {
     basePrice: 0,
     categoryId: "",
     isActive: true,
+    imageUrl: "",
   });
 
   const {

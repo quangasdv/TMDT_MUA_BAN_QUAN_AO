@@ -19,9 +19,9 @@
   - Chào Thầy và Hội đồng. Giới thiệu đề tài: *Hệ thống TMĐT thời trang TrendyFit giải quyết 2 bài toán nhức nhối của ngành: Tỷ lệ hoàn hàng 30% do sai kích cỡ và trải nghiệm mua sắm rời rạc thiếu đồng bộ outfit.*
   - Trình bày nhanh slide Sơ đồ Kiến trúc Headless: Tách biệt Next.js 16 (Turbopack) và Express TypeScript, cơ sở dữ liệu PostgreSQL chuẩn hóa 14 bảng.
 
-### Phần 2: Trình diễn Module Phòng Phối Đồ Tương Tác - Outfit Builder (Phút 4 - 6)
+### Phần 2: Trình diễn Mua theo Set Combo Thời Trang Ưu Đãi (Phút 4 - 6)
 * **Tân thao tác trên màn hình:**
-  - Truy cập route `/outfit-builder`.
+  - Truy cập route `/outfits` (hoặc bấm nút "Combo thời trang" trên thanh menu).
   - Màn hình hiển thị khung canvas phối đồ chia theo tầng: Áo khoác, Áo trong, Quần, Giày.
   - Thao tác click chọn thử: Chọn Áo blazer da đen $\rightarrow$ Chọn Áo thun trắng $\rightarrow$ Chọn Quần jean ống suông $\rightarrow$ Chọn Giày sneaker trắng.
   - Chỉ cho Thầy thấy: Thanh giá tự động cộng dồn 4 món và áp dụng chiết khấu combo 15%.

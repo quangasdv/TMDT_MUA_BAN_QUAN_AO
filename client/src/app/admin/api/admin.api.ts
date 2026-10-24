@@ -1,7 +1,12 @@
 import { baseAPI } from "@/api/axios.api";
 import {
+  AdminOutfitsResponse,
+  CreateOutfitPayload,
+  UpdateOutfitPayload,
+  AdminOutfit,
   DashboardStatsResponse,
   AdminOrdersResponse,
+  AdminOrder,
   UpdateOrderStatusResponse,
   AdminProductsResponse,
   CreateProductPayload,
@@ -236,3 +241,89 @@ export const updateAdminUserApi = async (
   return response.data;
 };
 
+/**
+ * 15. Tải file hình ảnh lên hệ thống
+ * POST /api/upload
+ */
+export const uploadImageApi = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("image", file);
+  const response = await baseAPI.post<{
+    success: boolean;
+    message: string;
+    data: { url: string; path: string };
+  }>("/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data.data.url;
+};
+
+/**
+ * Xác nhận hoàn tiền cho đơn hàng đã hủy (ADMIN & STAFF) - Hướng A
+ * PATCH /api/admin/orders/:id/refund
+ */
+export const confirmOrderRefundApi = async (
+  orderId: string
+): Promise<{ success: boolean; message: string; data: { order: AdminOrder } }> => {
+  const response = await baseAPI.patch<{
+    success: boolean;
+    message: string;
+    data: { order: AdminOrder };
+  }>(`/admin/orders/${encodeURIComponent(orderId)}/refund`);
+  return response.data;
+};
+
+/**
+ * 13. Lấy danh sách tất cả Combo thời trang (Chỉ ADMIN)
+ * GET /api/admin/outfits
+ */
+export const getAdminOutfitsApi = async (): Promise<AdminOutfitsResponse> => {
+  const response = await baseAPI.get<AdminOutfitsResponse>("/admin/outfits");
+  return response.data;
+};
+
+/**
+ * 14. Tạo Combo thời trang mới (Chỉ ADMIN)
+ * POST /api/admin/outfits
+ */
+export const createAdminOutfitApi = async (
+  payload: CreateOutfitPayload
+): Promise<{ success: boolean; message: string; data: { outfit: AdminOutfit } }> => {
+  const response = await baseAPI.post<{
+    success: boolean;
+    message: string;
+    data: { outfit: AdminOutfit };
+  }>("/admin/outfits", payload);
+  return response.data;
+};
+
+/**
+ * 15. Cập nhật Combo thời trang (Chỉ ADMIN)
+ * PUT /api/admin/outfits/:id
+ */
+export const updateAdminOutfitApi = async (
+  id: string,
+  payload: UpdateOutfitPayload
+): Promise<{ success: boolean; message: string; data: { outfit: AdminOutfit } }> => {
+  const response = await baseAPI.put<{
+    success: boolean;
+    message: string;
+    data: { outfit: AdminOutfit };
+  }>(`/admin/outfits/${encodeURIComponent(id)}`, payload);
+  return response.data;
+};
+
+/**
+ * 16. Xóa Combo thời trang (Chỉ ADMIN)
+ * DELETE /api/admin/outfits/:id
+ */
+export const deleteAdminOutfitApi = async (
+  id: string
+): Promise<{ success: boolean; message: string }> => {
+  const response = await baseAPI.delete<{ success: boolean; message: string }>(
+    `/admin/outfits/${encodeURIComponent(id)}`
+  );
+  return response.data;
+};

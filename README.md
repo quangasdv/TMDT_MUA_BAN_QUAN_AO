@@ -410,7 +410,7 @@ model Voucher {
 * `PATCH /api/cart/items/:id` - Cập nhật số lượng món trong giỏ hàng
 * `DELETE /api/cart/items/:id` - Xóa món khỏi giỏ
 * `POST /api/vouchers/apply` - Kiểm tra tính hợp lệ của mã giảm giá và tính toán số tiền giảm trước khi checkout
-* `POST /api/checkout` (hoặc `/api/checkout/lock`) - Tạo đơn hàng (Hỗ trợ quét mã QR PayOS giữ kho 10 phút hoặc Thanh toán khi nhận hàng COD chuẩn bị đơn ngay, tự động đối soát thanh toán khi giao thành công)
+* `POST /api/checkout` (hoặc `/api/checkout/lock`) - Tạo đơn hàng (Tính phí ship động theo phân vùng địa lý, Freeship $\ge$ 499k; Hỗ trợ quét mã QR PayOS giữ kho 10 phút hoặc COD chuẩn bị đơn ngay, tự động đối soát thanh toán khi giao thành công)
 * `GET /api/orders` - Danh sách đơn hàng của khách hàng hiện tại
 * `GET /api/orders/:code` - Tra cứu trạng thái chi tiết đơn hàng theo mã
 * `POST /api/payments/create-qr` - Sinh mã VietQR (qua PayOS hoặc Mock Engine)
@@ -422,7 +422,8 @@ model Voucher {
   - **`STAFF` (Nhân viên vận hành & kho):** Chỉ quản lý và cập nhật tiến trình đơn hàng theo quy trình đóng hàng/giao hàng. Tuyệt đối không xem doanh thu, không tạo/sửa voucher, không sửa giá sản phẩm, không quản lý tài khoản.
   - **`ADMIN` (Quản trị viên tối cao / Chủ shop):** Toàn quyền kiểm soát hệ thống: đơn hàng, sản phẩm, hình ảnh, voucher, phân quyền tài khoản người dùng/nhân viên, và báo cáo doanh thu tài chính.
 * `GET /api/admin/orders` - Quản lý danh sách đơn hàng (Quyền: **`ADMIN`** và **`STAFF`**)
-* `PATCH /api/admin/orders/:id/status` - Cập nhật trạng thái đơn hàng theo State Machine (`PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`; tự động đánh dấu đã thanh toán khi giao đơn COD thành công) (Quyền: **`ADMIN`** và **`STAFF`**)
+* `PATCH /api/admin/orders/:id/status` - Cập nhật trạng thái đơn hàng theo State Machine (`PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`; tự động đánh dấu đã thanh toán khi giao đơn COD thành công; tự động chuyển sang `PENDING_REFUND` nếu hủy đơn đã thanh toán) (Quyền: **`ADMIN`** và **`STAFF`**)
+* `PATCH /api/admin/orders/:id/refund` - Xác nhận hoàn tiền cho đơn hàng đã hủy (`paymentStatus = 'REFUNDED'`) (Quyền: **`ADMIN`** và **`STAFF`**)
 * `GET /api/admin/products` - Danh sách quản lý sản phẩm (Quyền: **`ADMIN`**)
 * `POST /api/admin/products` - Thêm mới sản phẩm và các biến thể SKU (Quyền: **`ADMIN`**)
 * `PUT /api/admin/products/:id` - Cập nhật thông tin sản phẩm, cập nhật link hình ảnh (`imageUrl`) và biến thể tồn kho (Quyền: **`ADMIN`**)
@@ -435,6 +436,15 @@ model Voucher {
 * `POST /api/admin/users` - Tạo tài khoản mới, phân vai trò STAFF/CUSTOMER/ADMIN (Bảo mật bcrypt, validate SĐT 10 số) (Quyền: **`ADMIN`**)
 * `PUT /api/admin/users/:id` - Cập nhật thông tin tài khoản, đổi vai trò, đổi mật khẩu (Quyền: **`ADMIN`**)
 * `GET /api/admin/stats` - Báo cáo tổng quan doanh thu, số lượng đơn (Quyền: **`ADMIN`**)
+* `GET /api/admin/outfits` - Quản lý danh sách các Combo / Set thời trang ưu đãi (Quyền: **`ADMIN`**)
+* `POST /api/admin/outfits` - Tạo mới Combo thời trang, thiết lập tỷ lệ giảm giá và danh sách món phối sẵn (Quyền: **`ADMIN`**)
+* `PUT /api/admin/outfits/:id` - Chỉnh sửa thông tin Combo, banner hình ảnh và các món trong set (Quyền: **`ADMIN`**)
+* `DELETE /api/admin/outfits/:id` - Xóa vĩnh viễn Combo thời trang khỏi hệ thống (Quyền: **`ADMIN`**)
+
+### 7.3. Tiện ích Tải lên Hình ảnh & Phục vụ File Tĩnh (Media & Upload API)
+* `POST /api/upload` - Tải lên 1 hình ảnh (`multipart/form-data`, hỗ trợ key `image` hoặc `file`). Trả về đường dẫn tĩnh `/uploads/...` và URL đầy đủ phục vụ hiển thị.
+* `POST /api/upload/multiple` - Tải lên đồng thời nhiều hình ảnh (tối đa 10 ảnh, key `images`).
+* **Phục vụ file tĩnh:** Cấu hình `express.static` tại đường dẫn `/uploads/*`, lưu trữ trực tiếp trên máy chủ (`server/public/uploads`). Giới hạn dung lượng 5MB/ảnh, kiểm tra định dạng an toàn (JPG, PNG, WEBP, GIF, AVIF).
 
 ---
 
@@ -540,6 +550,19 @@ Nhằm ngăn chặn hành vi chuyển trạng thái đơn hàng tùy tiện làm
   - Endpoint tạo QR code thanh toán (`POST /api/payments/create-qr`) kiểm tra chặt chẽ quyền sở hữu: Khách hàng chỉ được phép tạo mã thanh toán cho đơn hàng của chính tài khoản mình (`order.userId === req.user.id`).
 * **Cơ chế Idempotency Webhook toàn diện:**
   - Webhook thanh toán trả về thành công ngay lập tức (Idempotent OK) nếu đơn hàng đã có `paymentStatus === 'PAID'` hoặc đã chuyển sang các bước xử lý tiếp theo (`PAID`, `PROCESSING`, `SHIPPING`, `DELIVERED`), bảo đảm không bị từ chối lỗi khi PayOS gửi lại thông báo nhiều lần.
+
+### 8.11. Tính Phí Vận Chuyển Động Theo Khu Vực Địa Lý & Chính Sách Freeship (Dynamic Shipping Zone)
+* **Nguyên tắc tính toán thống nhất giữa Frontend và Backend:**
+  - **Miễn phí vận chuyển (Freeship 0 đ):** Tự động áp dụng cho mọi đơn hàng có giá trị hàng hóa (Subtotal) $\ge 499.000$ đ, không phân biệt vị trí địa lý trên toàn quốc.
+  - **Phân vùng biểu phí địa lý (khi Subtotal $< 499.000$ đ):**
+    - **Nội thành TP.HCM (Kho hàng xuất phát):** Phí vận chuyển tiêu chuẩn **20.000 đ** (Thời gian giao hàng: 1 - 2 ngày làm việc).
+    - **Miền Nam lân cận (18 tỉnh thành):** Phí vận chuyển **25.000 đ** (Thời gian giao hàng: 2 - 3 ngày làm việc) gồm: Bình Dương, Đồng Nai, Bà Rịa - Vũng Tàu, Long An, Tiền Giang, Bến Tre, Vĩnh Long, Cần Thơ, Tây Ninh, An Giang, Đồng Tháp, Hậu Giang, Kiên Giang, Bạc Liêu, Cà Mau, Sóc Trăng, Trà Vinh, Bình Phước.
+    - **Miền Trung & Miền Bắc:** Phí vận chuyển **35.000 đ** (Thời gian giao hàng: 3 - 4 ngày làm việc) gồm tất cả các tỉnh thành còn lại (Hà Nội, Đà Nẵng, Hải Phòng, Huế, Quảng Nam, Nghệ An, Thanh Hóa,...).
+* **Cơ chế Chống Gian Lận Phí Vận Chuyển Phía Client (Anti-Tampering Guard):**
+  - Phía Client không gửi số tiền phí ship trong payload checkout nhằm loại trừ nguy cơ kẻ gian sửa đổi giá tiền qua DevTools hoặc proxy.
+  - Phía Backend (`server/src/controllers/checkout.controller.ts`) độc lập phân tích chuỗi `shippingAddress` bằng Regex để trích xuất tên Tỉnh/Thành phố và tính toán lại phí ship, đảm bảo:
+    $\text{finalAmount} = \text{totalAmount} - \text{discountAmount} + \text{shippingFee}$
+  - Số tiền tạo giao dịch cổng thanh toán VietQR PayOS và tổng tiền thu hộ COD đều đồng bộ theo `finalAmount` này, bảo đảm không thất thoát doanh thu.
 
 ---
 

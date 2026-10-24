@@ -5,12 +5,13 @@ import { requireRoles } from "../middleware/rbac.middleware";
 
 const router = Router();
 
-// Tất cả các route admin đều bắt buộc đăng nhập
-router.use(authenticateJwt);
+// Tất cả các route /admin đều bắt buộc đăng nhập (JWT Authenticated)
+router.use("/admin", authenticateJwt);
 
 // 1. Quản lý đơn hàng: Cho phép cả ADMIN và STAFF (Mục 7.2 README.md)
 router.get("/admin/orders", requireRoles(["ADMIN", "STAFF"]), AdminController.getOrders);
 router.patch("/admin/orders/:id/status", requireRoles(["ADMIN", "STAFF"]), AdminController.updateOrderStatus);
+router.patch("/admin/orders/:id/refund", requireRoles(["ADMIN", "STAFF"]), AdminController.confirmOrderRefund);
 
 // 2. Quản lý Sản phẩm: Chỉ dành riêng cho ADMIN
 router.get("/admin/products", requireRoles(["ADMIN"]), AdminController.getProducts);
@@ -31,5 +32,11 @@ router.put("/admin/users/:id", requireRoles(["ADMIN"]), AdminController.updateUs
 
 // 5. Thống kê Báo cáo: Chỉ dành riêng cho ADMIN
 router.get("/admin/stats", requireRoles(["ADMIN"]), AdminController.getDashboardStats);
+
+// 6. Quản lý Combo Thời trang (Outfits): Chỉ dành riêng cho ADMIN
+router.get("/admin/outfits", requireRoles(["ADMIN"]), AdminController.getOutfits);
+router.post("/admin/outfits", requireRoles(["ADMIN"]), AdminController.createOutfit);
+router.put("/admin/outfits/:id", requireRoles(["ADMIN"]), AdminController.updateOutfit);
+router.delete("/admin/outfits/:id", requireRoles(["ADMIN"]), AdminController.deleteOutfit);
 
 export default router;

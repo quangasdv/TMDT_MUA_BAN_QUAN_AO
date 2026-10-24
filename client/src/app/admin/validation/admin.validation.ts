@@ -135,7 +135,7 @@ export const ORDER_STATUS_LABELS: Record<string, { label: string; colorClass: st
     bgClass: "bg-amber-50 border-amber-300",
   },
   PAID: {
-    label: "Đã thanh toán",
+    label: "Chờ xử lý",
     colorClass: "text-emerald-900",
     bgClass: "bg-emerald-50 border-emerald-300",
   },
@@ -176,6 +176,11 @@ export const PAYMENT_STATUS_LABELS: Record<string, { label: string; colorClass: 
     label: "Đã thanh toán",
     colorClass: "text-emerald-900",
     bgClass: "bg-emerald-50 border-emerald-300",
+  },
+  PENDING_REFUND: {
+    label: "Chờ hoàn tiền",
+    colorClass: "text-amber-900",
+    bgClass: "bg-amber-50 border-amber-300",
   },
   REFUNDED: {
     label: "Đã hoàn tiền",
@@ -272,6 +277,17 @@ export interface UpdateProductPayload {
   basePrice?: number;
   categoryId?: string;
   isActive?: boolean;
+  imageUrl?: string;
+  images?: string[];
+  variants?: {
+    id?: string;
+    sku?: string;
+    color?: string;
+    size?: string;
+    priceAdjustment?: number;
+    stockQuantity?: number;
+    imageUrl?: string;
+  }[];
 }
 
 /**
@@ -478,5 +494,94 @@ export const USER_ROLE_LABELS: Record<
     label: "Khách hàng",
     colorClass: "text-slate-800",
     bgClass: "bg-slate-100 border-slate-300",
+  },
+};
+
+/**
+ * 2.9.5 Kiểu dữ liệu Quản lý Combo Thời trang / Outfits (GET /api/admin/outfits)
+ */
+export interface AdminOutfitItem {
+  id: string;
+  slotType: "TOP" | "BOTTOM" | "OUTERWEAR" | "SHOES" | "ACCESSORY" | string;
+  variantId: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  color: string;
+  size: string;
+  imageUrl?: string;
+  price: number;
+}
+
+export interface AdminOutfit {
+  id: string;
+  title: string;
+  description?: string | null;
+  bannerUrl?: string | null;
+  discountRate: number;
+  discountPercent: number;
+  isActive: boolean;
+  originalPrice: number;
+  comboPrice: number;
+  savedAmount: number;
+  clothingOriginalPrice: number;
+  totalOriginalPrice: number;
+  items: AdminOutfitItem[];
+}
+
+export interface AdminOutfitsResponse {
+  success: boolean;
+  data: {
+    outfits: AdminOutfit[];
+  };
+}
+
+export interface CreateOutfitPayload {
+  title: string;
+  description?: string;
+  bannerUrl?: string;
+  discountRate: number;
+  isActive?: boolean;
+  items: Array<{
+    variantId: string;
+    slotType: string;
+  }>;
+}
+
+export interface UpdateOutfitPayload {
+  title?: string;
+  description?: string;
+  bannerUrl?: string;
+  discountRate?: number;
+  isActive?: boolean;
+  items?: Array<{
+    variantId: string;
+    slotType: string;
+  }>;
+}
+
+export const OUTFIT_SLOT_LABELS: Record<
+  string,
+  { label: string; badgeClass: string }
+> = {
+  TOP: {
+    label: "Áo (Top)",
+    badgeClass: "bg-sky-50 text-sky-800 border-sky-300",
+  },
+  BOTTOM: {
+    label: "Quần (Bottom)",
+    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-300",
+  },
+  OUTERWEAR: {
+    label: "Áo khoác (Outerwear)",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-300",
+  },
+  SHOES: {
+    label: "Giày dép (Shoes)",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-300",
+  },
+  ACCESSORY: {
+    label: "Phụ kiện (Accessory)",
+    badgeClass: "bg-purple-50 text-purple-800 border-purple-300",
   },
 };

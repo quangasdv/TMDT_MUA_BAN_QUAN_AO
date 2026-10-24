@@ -22,6 +22,22 @@ export const errorHandler = (
     return;
   }
 
+  // Bắt lỗi upload file Multer
+  if (
+    err.name === "MulterError" ||
+    err.message?.includes("Chỉ chấp nhận các file ảnh")
+  ) {
+    res.status(400).json({
+      success: false,
+      errorCode: "INVALID_FILE_UPLOAD",
+      message:
+        err.code === "LIMIT_FILE_SIZE"
+          ? "Kích thước file ảnh vượt quá giới hạn tối đa 5MB."
+          : err.message,
+    });
+    return;
+  }
+
   const statusCode = err.statusCode || 500;
   const errorCode =
     err.errorCode ||

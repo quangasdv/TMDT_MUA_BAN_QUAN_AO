@@ -280,9 +280,9 @@ export default function HomePage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20 text-primary">
                   <Layers size={20} />
                 </div>
-                <h4 className="font-bold text-sm">Outfit Canvas 2D</h4>
+                <h4 className="font-bold text-sm">Combo Thời Trang Ưu Đãi</h4>
                 <p className="text-xs text-muted-foreground">
-                  Phối trang phục theo từng lớp layer trực quan, tự động tính tổng tiền combo.
+                  Phối trang phục theo set hoàn chỉnh, tự động áp dụng mức giảm giá combo tiết kiệm.
                 </p>
               </div>
 

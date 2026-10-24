@@ -34,6 +34,13 @@ import "./style/checkout.css";
 
 export default function CheckoutPage() {
   const router = useRouter();
+
+  // Cascading Address Select Boxes state
+  const [selectedProvinceId, setSelectedProvinceId] = React.useState<string>("hcm");
+  const [selectedDistrictId, setSelectedDistrictId] = React.useState<string>("q1");
+  const [selectedWardId, setSelectedWardId] = React.useState<string>("bn");
+  const [streetDetail, setStreetDetail] = React.useState<string>("");
+
   const {
     form,
     isAuthenticated,
@@ -43,6 +50,7 @@ export default function CheckoutPage() {
     subtotalPrice,
     isFreeShipping,
     shippingFee,
+    shippingRate,
     discountAmount,
     finalTotal,
     appliedVoucher,
@@ -54,7 +62,7 @@ export default function CheckoutPage() {
     applyVoucher,
     removeVoucher,
     onSubmit,
-  } = useCheckout();
+  } = useCheckout({ selectedProvinceId });
 
   const {
     register,
@@ -66,12 +74,6 @@ export default function CheckoutPage() {
 
   // Phương thức thanh toán (VIETQR hoặc COD)
   const [paymentMethod, setPaymentMethod] = React.useState<"VIETQR" | "COD">("VIETQR");
-
-  // Cascading Address Select Boxes state
-  const [selectedProvinceId, setSelectedProvinceId] = React.useState<string>("hcm");
-  const [selectedDistrictId, setSelectedDistrictId] = React.useState<string>("q1");
-  const [selectedWardId, setSelectedWardId] = React.useState<string>("bn");
-  const [streetDetail, setStreetDetail] = React.useState<string>("");
 
   const currentProvince = VIETNAM_ADDRESSES.find((p) => p.id === selectedProvinceId);
   const availableDistricts = currentProvince?.districts || [];
@@ -725,8 +727,15 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Phí giao hàng</span>
-                  <span className="font-bold text-foreground">
+                  <div>
+                    <span className="block font-medium">Phí giao hàng</span>
+                    {!isFreeShipping && shippingRate && (
+                      <span className="text-[11px] text-slate-500 font-medium block">
+                        {shippingRate.zoneName} • {shippingRate.estimatedDelivery}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-bold text-foreground self-start">
                     {isFreeShipping ? (
                       <span className="text-emerald-600">Miễn phí (Đơn ≥ 499k)</span>
                     ) : (

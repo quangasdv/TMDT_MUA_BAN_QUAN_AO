@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import path from "path";
+import fs from "fs";
 import { ENV } from "./config/env";
 import apiRouter from "./routes";
 import { errorHandler } from "./middleware/error.middleware";
@@ -24,6 +26,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Đảm bảo thư mục lưu trữ ảnh công khai tồn tại: server/public/uploads
+const uploadsDir = path.join(__dirname, "../public/uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Phục vụ tĩnh thư mục uploads công khai cho trình duyệt và Frontend
+app.use("/uploads", express.static(uploadsDir));
+
 // Endpoint kiểm tra sức khỏe máy chủ
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -46,7 +57,8 @@ app.listen(ENV.PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 TRENDYFIT BACKEND API ĐANG CHẠY TẠI CỔNG : ${ENV.PORT}`);
   console.log(`📡 URL Máy chủ: http://localhost:${ENV.PORT}`);
-  console.log(`🛠️ Chế độ Mock Payment: ${ENV.PAYMENT_MOCK_MODE ? "BẬT (Demo/Dev)" : "TẮT (Production)"}`);
+  console.log(`🛠️  Chế độ Mock Payment: ${ENV.PAYMENT_MOCK_MODE ? "BẬT (Demo/Dev)" : "TẮT (Production)"}`);
+  console.log(`📁 Thư mục Uploads tĩnh: ${uploadsDir}`);
   console.log(`=======================================================`);
 
   // Khởi động tiến trình Cron quét giải phóng kho 10 phút

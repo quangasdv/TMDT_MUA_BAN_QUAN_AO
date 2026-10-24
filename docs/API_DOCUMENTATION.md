@@ -410,419 +410,26 @@
 > **Mục đích:** Khách hàng tiến hành đặt hàng với giỏ hàng hiện tại. Hỗ trợ 2 phương thức: Quét mã QR PayOS (giữ kho 10 phút) hoặc Thanh toán khi nhận hàng COD (chuẩn bị đơn ngay).
 * **Quy chuẩn thông tin:**
   - `recipientName`: Họ tên người nhận (tối thiểu 2 ký tự).
-  - `recipientPhone`: Số điện thoại người nhận (cho phép nhập/sửa tự do, chuẩn định dạng 10 chữ số Việt Nam `^0[35789][0-9]{8}# TÀI LIỆU ĐẶC TẢ TÍCH HỢP API HỆ THỐNG TRENDYFIT (API SPECIFICATION)
-> Tài liệu kỹ thuật bàn giao cho Frontend Team (Nguyễn Đăng Quang & Hoàng Đình Tân) để gọi API Backend.
-
----
-
-## 1. Cấu hình Chung & Cơ Chế Lưu Trữ Token (Authentication & Storage)
-
-* **Base URL:** `http://localhost:5000/api`
-* **Content-Type:** `application/json`
-* **Cơ chế lưu trữ Token (Trả lời chi tiết câu hỏi của Frontend):**
-  1. **Access Token (Thời hạn ngắn - 15 phút):**
-     - Được Backend trả về trong body JSON khi đăng nhập: `res.data.data.accessToken`.
-     - **Vị trí lưu trữ phía FE:** Lưu trong **`localStorage`** (`localStorage.setItem("accessToken", accessToken)`).
-     - **Cách gửi lên BE:** Đính kèm trong Header: `Authorization: Bearer <accessToken>` (file `client/src/api/axios.api.ts` đã cấu hình Interceptor tự động gắn).
-  2. **Refresh Token (Thời hạn dài - 7 ngày):**
-     - Được Backend tự động lưu vào **`HTTP-Only Cookie`** (tên cookie: `refreshToken`) để bảo mật tuyệt đối, chống tấn công XSS.
-     - **Vị trí lưu trữ phía FE:** Trình duyệt tự động quản lý. **Code JavaScript phía FE KHÔNG CẦN và KHÔNG THỂ đọc/sửa cookie này**.
-     - **Cách gửi lên BE:** Trình duyệt tự động đính kèm cookie mỗi khi gọi API làm mới token (`POST /api/auth/refresh`), chỉ cần Axios bật `withCredentials: true` (đã cấu hình sẵn).
-  3. **Mã phiên khách vãng lai (Guest Session ID):**
-     - Lưu trong **`localStorage`** (`trendyfit_session_id`) và tự động đính kèm qua header `x-session-id`. Khi khách đăng nhập, form login truyền `guestSessionId` lên để BE tự động gộp giỏ hàng.
-
----
-
-## 2. Danh mục API Chi tiết
-
-### 2.1. Xác thực & Tài khoản (`/api/auth`)
-
-#### `POST /api/auth/register` - Đăng ký tài khoản mới
-* **Ràng buộc kiểm tra dữ liệu (Validation Rules):**
-  - **`password` (Mật khẩu):** Bắt buộc, **tối thiểu 6 ký tự** (`min(6)`). Không giới hạn độ dài tối đa, không ép buộc ký tự hoa hay ký tự đặc biệt (tuy nhiên khuyến nghị sử dụng mật khẩu an toàn).
-  - **`email`:** Bắt buộc, đúng định dạng email tiêu chuẩn (`name@domain.com`).
-  - **`fullName` (Họ và tên):** Bắt buộc, **tối thiểu 2 ký tự** (`min(2)`).
-  - **`phone` (Số điện thoại):** Tùy chọn (không bắt buộc).
-* **Request Body:**
-```json
-{
-  "email": "customer@gmail.com",
-  "password": "Password@123",
-  "fullName": "Nguyễn Văn Khách Hàng",
-  "phone": "0988888888" // Không bắt buộc
-}
-```
-* **Response (201 Created):**
-```json
-{
-  "success": true,
-  "message": "Đăng ký tài khoản thành công!",
-  "data": {
-    "user": {
-      "id": "c7a8...",
-      "email": "customer@gmail.com",
-      "fullName": "Nguyễn Văn Khách Hàng",
-      "role": "CUSTOMER"
-    }
-  }
-}
-```
-
-#### `POST /api/auth/login` - Đăng nhập
-* **Request Body (Hỗ trợ Gộp giỏ hàng khách vãng lai):**
-```json
-{
-  "email": "customer@gmail.com",
-  "password": "Password@123",
-  "guestSessionId": "guest_abc123" // Nếu truyền, hệ thống sẽ tự động gộp giỏ hàng guest vào tài khoản user
-}
-```
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Đăng nhập thành công!",
-  "data": {
-    "user": {
-      "id": "c7a8...",
-      "email": "customer@gmail.com",
-      "fullName": "Nguyễn Văn Khách Hàng",
-      "role": "CUSTOMER"
-    },
-    "accessToken": "eyJhbGciOi..."
-  }
-}
-```
-
-#### `POST /api/auth/refresh` - Làm mới Access Token
-* **Request:** Không cần body, trình duyệt tự gửi HTTP-Only cookie `refreshToken`.
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOi..."
-  }
-}
-```
-
-#### `POST /api/auth/logout` - Đăng xuất
-* **Headers:** `Authorization: Bearer <accessToken>`
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Đăng xuất thành công!"
-}
-```
-
-#### `GET /api/auth/me` - Lấy thông tin tài khoản đang đăng nhập
-* **Headers:** `Authorization: Bearer <accessToken>`
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "c7a8...",
-      "email": "customer@gmail.com",
-      "fullName": "Nguyễn Văn Khách Hàng",
-      "role": "CUSTOMER",
-      "phone": "0988888888"
-    }
-  }
-}
-```
-
----
-
-### 2.2. Sản phẩm & Danh mục Storefront (`/api`)
-
-#### `GET /api/categories` - Danh sách danh mục
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "categories": [
-      { "id": "cat-1", "name": "Áo Thun & Sơ Mi", "slug": "ao-thun", "children": [] },
-      { "id": "cat-2", "name": "Quần Jean & Kaki", "slug": "quan-jean", "children": [] }
-    ]
-  }
-}
-```
-
-#### `GET /api/products` - Lấy danh sách sản phẩm (có lọc & phân trang)
-* **Query Params:**
-  - `q`: Từ khóa tìm kiếm theo tên hoặc mô tả
-  - `categoryId`: Lọc theo danh mục
-  - `minPrice`, `maxPrice`: Khoảng giá cơ bản
-  - `color`: Màu sắc (ví dụ: `BLACK`, `WHITE`)
-  - `size`: Kích thước (ví dụ: `M`, `L`, `XL`)
-  - `page`: Trang hiện tại (mặc định: `1`)
-  - `limit`: Số món mỗi trang (mặc định: `12`)
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "products": [
-      {
-        "id": "prod-1",
-        "name": "Áo Thun Basic Unisex TrendyFit",
-        "slug": "ao-thun-basic-unisex",
-        "basePrice": "199000",
-        "images": ["https://images.unsplash.com/..."],
-        "category": { "name": "Áo Thun & Sơ Mi" },
-        "variants": [
-          { "id": "var-1", "size": "M", "color": "BLACK", "stockQuantity": 50, "priceAdjustment": "0" }
-        ]
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 12,
-      "total": 35,
-      "totalPages": 3
-    }
-  }
-}
-```
-
-#### `GET /api/products/search` (hoặc alias: `GET /api/search`) - Tìm kiếm sản phẩm theo từ khóa (Keyword Search)
-> **Mục đích:** Dành riêng cho ô tìm kiếm (Search Bar) trên Header hoặc trang Kết quả tìm kiếm. Tìm kiếm theo tên sản phẩm, mô tả hoặc tên danh mục (không phân biệt chữ hoa thường - ILIKE).
-* **Query Params:**
-  - `q`: Từ khóa tìm kiếm (Ví dụ: `blazer`, `áo thun`, `jean`)
-  - `page`: Trang hiện tại (mặc định: `1`)
-  - `limit`: Số lượng sản phẩm mỗi trang (mặc định: `12`)
-* **Ví dụ gọi API:**
-  - `GET /api/products/search?q=blazer`
-  - `GET /api/search?q=quan+jean&page=1&limit=10`
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "keyword": "blazer",
-    "products": [
-      {
-        "id": "prod-1",
-        "name": "Áo Blazer Form Rộng Streetwear TrendyFit",
-        "slug": "ao-blazer-oversize-trendyfit",
-        "basePrice": "590000",
-        "category": { "id": "cat-1", "name": "Áo Khoác", "slug": "ao-khoac" },
-        "variants": []
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 12,
-      "total": 1,
-      "totalPages": 1
-    }
-  }
-}
-```
-
-#### `GET /api/products/filter` (hoặc alias: `GET /api/filter`) - Bộ lọc sản phẩm tổng hợp (Advanced Filter)
-> **Mục đích:** Dành riêng cho Sidebar bộ lọc ở trang Danh mục / Cửa hàng. Hỗ trợ lọc theo mọi tiêu chí (danh mục, khoảng giá, màu sắc, kích cỡ, còn hàng, sắp xếp).
-* **Query Params:**
-  - `category`: Slug danh mục (Ví dụ: `ao-thun`, `quan-jean`, `ao-khoac`)
-  - `categoryId`: ID danh mục (nếu FE dùng ID thay vì slug)
-  - `minPrice`: Giá tối thiểu (VNĐ, ví dụ: `200000`)
-  - `maxPrice`: Giá tối đa (VNĐ, ví dụ: `600000`)
-  - `color`: Màu sắc (Ví dụ: `Đen` hoặc danh sách nhiều màu phân tách bằng dấu phẩy: `Đen,Trắng,Xanh Wash`)
-  - `size`: Kích cỡ (Ví dụ: `M` hoặc danh sách nhiều size: `S,M,L,41`)
-  - `inStock`: `true` hoặc `1` (Chỉ lấy các sản phẩm có số lượng tồn kho `stockQuantity > 0`)
-  - `sortBy`: Tiêu chí sắp xếp:
-    - `newest`: Mới nhất (mặc định)
-    - `price_asc`: Giá tăng dần
-    - `price_desc`: Giá giảm dần
-    - `name_asc`: Tên A -> Z
-  - `page`: Trang hiện tại (mặc định: `1`)
-  - `limit`: Số sản phẩm mỗi trang (mặc định: `12`)
-* **Ví dụ gọi API:**
-  - `GET /api/products/filter?category=quan-jean&color=Xanh+Wash&inStock=true`
-  - `GET /api/filter?minPrice=300000&maxPrice=700000&sortBy=price_asc`
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "filtersApplied": {
-      "category": "quan-jean",
-      "minPrice": null,
-      "maxPrice": null,
-      "color": "Xanh Wash",
-      "size": null,
-      "inStock": true,
-      "sortBy": "newest"
-    },
-    "products": [],
-    "pagination": {
-      "page": 1,
-      "limit": 12,
-      "total": 1,
-      "totalPages": 1
-    }
-  }
-}
-```
-
-#### `GET /api/products/:slug` - Chi tiết sản phẩm theo Slug
-* **Params:** `slug` (ví dụ: `ao-thun-basic-unisex`)
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "product": {
-      "id": "prod-1",
-      "name": "Áo Thun Basic Unisex TrendyFit",
-      "slug": "ao-thun-basic-unisex",
-      "basePrice": "199000",
-      "description": "Chất liệu cotton 100% thoáng mát...",
-      "images": ["url1", "url2"],
-      "isActive": true,
-      "category": { "id": "cat-1", "name": "Áo Thun & Sơ Mi" },
-      "variants": [
-        { "id": "var-1", "sku": "AT-M-BLK", "size": "M", "color": "BLACK", "stockQuantity": 50, "priceAdjustment": "0" },
-        { "id": "var-2", "sku": "AT-L-BLK", "size": "L", "color": "BLACK", "stockQuantity": 30, "priceAdjustment": "0" }
-      ],
-      "sizeCharts": [
-        { "size": "M", "minHeight": 160, "maxHeight": 170, "minWeight": 50, "maxWeight": 65 },
-        { "size": "L", "minHeight": 170, "maxHeight": 180, "minWeight": 65, "maxWeight": 78 }
-      ]
-    }
-  }
-}
-```
-
----
-
-### 2.3. Giỏ hàng Storefront (`/api/cart`)
-> **Lưu ý:** Hỗ trợ cả khách đăng nhập (`Authorization`) và khách vãng lai (`x-session-id`).
-
-#### `GET /api/cart` - Lấy thông tin giỏ hàng hiện tại
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "cart": {
-      "id": "cart-123",
-      "items": [
-        {
-          "id": "item-1",
-          "variantId": "var-1",
-          "quantity": 2,
-          "variant": {
-            "id": "var-1",
-            "size": "M",
-            "color": "BLACK",
-            "stockQuantity": 50,
-            "priceAdjustment": "0",
-            "product": {
-              "id": "prod-1",
-              "name": "Áo Thun Basic Unisex",
-              "slug": "ao-thun-basic-unisex",
-              "basePrice": "199000",
-              "images": ["url1"]
-            }
-          }
-        }
-      ]
-    }
-  }
-}
-```
-
-#### `POST /api/cart/items` - Thêm sản phẩm vào giỏ
-* **Request Body:**
-```json
-{
-  "variantId": "var-1",
-  "quantity": 1
-}
-```
-* **Response (200 OK / 201 Created):**
-```json
-{
-  "success": true,
-  "message": "Đã thêm sản phẩm vào giỏ hàng!",
-  "data": {
-    "cartItem": { "id": "item-1", "variantId": "var-1", "quantity": 1 }
-  }
-}
-```
-
-#### `PATCH /api/cart/items/:id` - Cập nhật số lượng món trong giỏ
-* **Params:** `id` (mã ID của `cartItem`)
-* **Request Body:**
-```json
-{
-  "quantity": 3 // Nếu truyền = 0 -> hệ thống tự động xóa món này khỏi giỏ
-}
-```
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Cập nhật số lượng thành công!",
-  "data": { "cartItem": { "id": "item-1", "quantity": 3 } }
-}
-```
-
-#### `DELETE /api/cart/items/:id` - Xóa món khỏi giỏ
-* **Params:** `id` (mã ID của `cartItem`)
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Đã xóa sản phẩm khỏi giỏ hàng."
-}
-```
-
----
-
-### 2.4. Mã giảm giá (`/api/vouchers`)
-
-#### `POST /api/vouchers/apply` - Kiểm tra và xem trước số tiền giảm
-* **Request Body:**
-```json
-{
-  "code": "TRENDY10",
-  "orderTotal": 500000
-}
-```
-* **Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Áp dụng mã giảm giá thành công!",
-  "data": {
-    "voucher": {
-      "id": "vouch-1",
-      "code": "TRENDY10",
-      "discountType": "PERCENT",
-      "discountValue": 10
-    },
-    "discountAmount": 50000,
-    "finalTotal": 450000
-  }
-}
-```
-
----
-
-### 2.5. Đặt hàng & Khóa kho Atomic (`/api/checkout`)
-> **Bắt buộc đăng nhập:** Header `Authorization: Bearer <accessToken>`.
-
-).
+  - `recipientPhone`: Số điện thoại người nhận (cho phép nhập/sửa tự do, chuẩn định dạng 10 chữ số Việt Nam `^0[35789][0-9]{8}`).
   - `shippingAddress`: Địa chỉ giao hàng (tối thiểu 5 ký tự).
   - `paymentMethod`: `"QR"` (Mặc định - quét mã online) hoặc `"COD"` (Thanh toán khi nhận hàng).
   - `voucherCode`: Mã giảm giá (nếu có).
   - `items`: Danh sách biến thể mua (`variantId`, `quantity`).
+
+* **Chính sách Phí Vận Chuyển Động Theo Khu Vực (Dynamic Shipping Fee Policy):**
+  - **Công thức tính tổng tiền thanh toán (`finalAmount`):**
+    $$\text{finalAmount} = \text{totalAmount} - \text{discountAmount} + \text{shippingFee}$$
+  - **Chính sách Miễn phí vận chuyển (Freeship Toàn quốc):**
+    - Tự động áp dụng khi giá trị hàng hóa: $\text{totalAmount} \ge 499.000\text{ đ} \Rightarrow \mathbf{\text{shippingFee} = 0\text{ đ}}$ (áp dụng cho mọi tỉnh thành trên cả nước).
+  - **Bảng biểu phí vận chuyển theo phân vùng địa lý (khi $\text{totalAmount} < 499.000\text{ đ}$):**
+    | Phân vùng địa lý | Phạm vi Tỉnh / Thành phố | Phí vận chuyển tiêu chuẩn | Thời gian giao hàng dự kiến |
+    | :--- | :--- | :---: | :---: |
+    | **Nội thành TP.HCM** | TP. Hồ Chí Minh (Kho vận xuất hàng trực tiếp của TrendyFit) | **20.000 đ** | 1 - 2 ngày làm việc |
+    | **Miền Nam lân cận** | Bình Dương, Đồng Nai, Bà Rịa - Vũng Tàu, Cần Thơ, Long An, Tiền Giang, Tây Ninh, Bến Tre, Vĩnh Long, Hậu Giang, Sóc Trăng, Đồng Tháp, An Giang, Kiên Giang, Bạc Liêu, Cà Mau, Bình Phước, Trà Vinh (18 tỉnh thành) | **25.000 đ** | 2 - 3 ngày làm việc |
+    | **Miền Trung & Miền Bắc** | Hà Nội, Đà Nẵng, Hải Phòng, Thừa Thiên Huế, Quảng Nam, Nghệ An, Thanh Hóa,... (tất cả các tỉnh thành còn lại) | **35.000 đ** | 3 - 4 ngày làm việc |
+  - **Cơ chế Bảo mật Chống thao túng giá phía Backend (Anti-Tampering Backend Guard):**
+    - Client tuyệt đối **không tự gửi số tiền phí ship** lên server. Backend (`server/src/controllers/checkout.controller.ts`) sẽ tự động trích xuất Tỉnh/Thành phố từ chuỗi `shippingAddress` bằng Regex và tính toán phí ship độc lập.
+    - Số tiền chuyển khoản mã QR PayOS và tổng tiền thu hộ COD luôn được ràng buộc khớp chính xác 100% với `finalAmount` đã bao gồm phí vận chuyển.
 * **Request Body (Ví dụ đơn COD):**
 ```json
 {
@@ -1024,6 +631,9 @@
 * `PATCH /api/admin/orders/:id/status`: Chuyển trạng thái đơn hàng theo State Machine:
   - `PROCESSING` (Đang chuẩn bị hàng) $\rightarrow$ `SHIPPING` (Đang giao hàng) $\rightarrow$ `DELIVERED` (Đã giao hàng & tự động đánh dấu đã thanh toán cho đơn COD).
   - `CANCELLED`: Hủy đơn (nếu hủy đơn đang `PENDING_PAYMENT` hoặc `PROCESSING`, hệ thống tự động hoàn trả số lượng tồn kho).
+* `PATCH /api/admin/orders/:id/refund`: **Xác nhận hoàn tiền cho đơn hàng đã hủy (Quy trình Hướng A)** (Role: `ADMIN`, `STAFF`):
+  - Chuyển `paymentStatus` từ `PENDING_REFUND` (Chờ hoàn tiền) sang `REFUNDED` (Đã hoàn tiền).
+  - Cập nhật bản ghi `PaymentTransaction.status = 'REFUNDED'`.
 
 #### 2.9.2. Quản lý Sản phẩm & Hình ảnh (Role: `ADMIN`)
 * `GET /api/admin/products`: Danh sách sản phẩm (bao gồm cả sản phẩm đang ẩn).
@@ -1046,6 +656,166 @@
 
 #### 2.9.5. Báo cáo Thống kê Doanh thu (Role: `ADMIN`)
 * `GET /api/admin/stats`: Thống kê tổng doanh thu thực tế, số đơn hoàn tất, tổng người dùng, tổng sản phẩm đang mở bán.
+
+### 2.10. Tải lên Hình ảnh & Quản lý File Tĩnh (`/api/upload`)
+Hệ thống tích hợp middleware Multer xử lý tải lên trực tiếp các file ảnh sản phẩm hoặc tài nguyên quản trị, tự động sinh mã định danh chống trùng lặp và lưu trữ cục bộ tại thư mục tĩnh `server/public/uploads`, đồng thời phục vụ trực tiếp qua URL công khai.
+
+#### `POST /api/upload` - Tải lên một hình ảnh đơn (Single Image Upload)
+* **Phương thức:** `POST`
+* **Content-Type:** `multipart/form-data`
+* **Field name chấp nhận:** Chấp nhận một trong các key: **`image`** hoặc **`file`**.
+* **Định dạng file cho phép:** `image/jpeg`, `image/png`, `image/webp`, `image/gif`, `image/avif`.
+* **Giới hạn dung lượng:** Tối đa **5MB / file** (vượt quá trả về HTTP 400 kèm `errorCode: "INVALID_FILE_UPLOAD"`).
+* **Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tải hình ảnh lên máy chủ thành công!",
+  "data": {
+    "url": "http://localhost:5000/uploads/ao-thun-trendyfit-1792831655829-247281.png",
+    "path": "/uploads/ao-thun-trendyfit-1792831655829-247281.png",
+    "filename": "ao-thun-trendyfit-1792831655829-247281.png",
+    "originalName": "ao-thun-trendyfit.png",
+    "mimetype": "image/png",
+    "size": 619039
+  }
+}
+```
+
+#### `POST /api/upload/multiple` - Tải lên đồng thời nhiều hình ảnh (Multiple Images Upload)
+* **Phương thức:** `POST`
+* **Content-Type:** `multipart/form-data`
+* **Field name:** `images`
+* **Giới hạn:** Tối đa **10 file / lần tải**.
+* **Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tải lên 2 hình ảnh thành công!",
+  "data": {
+    "count": 2,
+    "files": [
+      {
+        "url": "http://localhost:5000/uploads/anh-1-1792831655829-111111.png",
+        "path": "/uploads/anh-1-1792831655829-111111.png",
+        "filename": "anh-1-1792831655829-111111.png",
+        "originalName": "anh-1.png",
+        "mimetype": "image/png",
+        "size": 320000
+      }
+    ]
+  }
+}
+```
+
+#### Hướng dẫn Frontend kết hợp Upload ảnh khi Thêm / Sửa Sản phẩm:
+```typescript
+// 1. Khi Admin chọn file ảnh từ form:
+const handleUploadImage = async (file: File) => {
+  const formData = new FormData();
+  formData.append("image", file); // Chấp nhận key "image" hoặc "file"
+
+  const res = await axios.post("http://localhost:5000/api/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  
+  // URL ảnh trả về từ backend, ví dụ: "http://localhost:5000/uploads/ten-anh-1234.png"
+  return res.data.data.url;
+};
+
+// 2. Gán URL vào payload thêm / sửa sản phẩm:
+// - Thêm sản phẩm: POST /api/admin/products -> variants: [{ color, size, stock, imageUrl: uploadedUrl }]
+// - Sửa sản phẩm: PUT /api/admin/products/:id -> variants: [{ id, color, size, stock, imageUrl: uploadedUrl }]
+```
+
+
+### 2.9.6. Quản lý Combo Thời Trang / Outfits (`/api/admin/outfits`) - Dành riêng cho ADMIN
+> **Mục đích:** Cho phép Quản trị viên (Admin) toàn quyền khởi tạo, chỉnh sửa tỷ lệ giảm giá và quản lý các set đồ phối sẵn (Combos / Outfits).
+
+#### `GET /api/admin/outfits` - Lấy danh sách tất cả Combo thời trang
+* **Headers:** `Authorization: Bearer <ADMIN_TOKEN>`
+* **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [
+      {
+        "id": "combo-uuid",
+        "title": "Streetwear All-Black Layering",
+        "description": "Set đồ đường phố cá tính phối layer giữa Áo Blazer, Áo thun và Quần jean.",
+        "bannerUrl": "http://localhost:5000/uploads/banner.png",
+        "discountRate": 0.15,
+        "discountPercent": 15,
+        "isActive": true,
+        "originalPrice": 1259000,
+        "comboPrice": 1070150,
+        "savedAmount": 188850,
+        "items": [
+          {
+            "id": "item-1",
+            "slotType": "OUTERWEAR",
+            "variantId": "var-uuid-blazer",
+            "productName": "Áo Blazer Form Rộng",
+            "sku": "AO-BLAZER-DEN-L",
+            "color": "Đen",
+            "size": "L",
+            "price": 590000
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### `POST /api/admin/outfits` - Tạo Combo mới kèm danh sách món
+* **Headers:** `Authorization: Bearer <ADMIN_TOKEN>`, `Content-Type: application/json`
+* **Request Body:**
+```json
+{
+  "title": "Smart Casual Thu Đông",
+  "description": "Set đồ công sở lịch lãm năng động",
+  "bannerUrl": "http://localhost:5000/uploads/banner-smart-casual.png",
+  "discountRate": 0.15,
+  "isActive": true,
+  "items": [
+    { "variantId": "var-uuid-blazer", "slotType": "OUTERWEAR" },
+    { "variantId": "var-uuid-tee", "slotType": "TOP" },
+    { "variantId": "var-uuid-jean", "slotType": "BOTTOM" }
+  ]
+}
+```
+* **Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Đã tạo Combo thời trang 'Smart Casual Thu Đông' thành công!",
+  "data": { "outfit": { "id": "uuid", "title": "Smart Casual Thu Đông" } }
+}
+```
+
+#### `PUT /api/admin/outfits/:id` - Chỉnh sửa Combo & Tỷ lệ giảm giá
+* **Headers:** `Authorization: Bearer <ADMIN_TOKEN>`, `Content-Type: application/json`
+* **Request Body:** Có thể cập nhật `title`, `description`, `bannerUrl`, `discountRate`, `isActive`, `items`
+* **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Cập nhật Combo thời trang thành công!",
+  "data": { "outfit": { "id": "uuid" } }
+}
+```
+
+#### `DELETE /api/admin/outfits/:id` - Xóa vĩnh viễn Combo
+* **Headers:** `Authorization: Bearer <ADMIN_TOKEN>`
+* **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Đã xóa Combo thành công!"
+}
+```
 
 ---
 
@@ -1091,6 +861,7 @@ Mọi phản hồi lỗi từ Backend đều trả về mã HTTP tương ứng (
 | **`VOUCHER_MIN_ORDER_VALUE`** | `400` | Đơn hàng chưa đủ giá trị tối thiểu | Báo số tiền còn thiếu để được áp dụng mã |
 | **`VOUCHER_NOT_FOUND`** | `404` | Mã voucher không tồn tại | Báo mã không tồn tại |
 | **`RATE_LIMIT_EXCEEDED`** | `429` | Bị khóa tạm thời do gửi request quá nhanh | Báo thử lại sau 1 phút, khóa nút bấm tạm thời |
+| **`INVALID_FILE_UPLOAD`** | `400` | Định dạng file không hợp lệ hoặc dung lượng file ảnh vượt quá 5MB | Hiển thị Toast lỗi: *"Chỉ chấp nhận file ảnh JPG, PNG, WEBP, GIF, AVIF tối đa 5MB."* |
 | **`VALIDATION_ERROR`** | `400` | Sai định dạng Zod | Duyệt qua mảng `errors` để tô đỏ từng ô nhập tương ứng |
 | **`INTERNAL_SERVER_ERROR`** | `500` | Lỗi máy chủ không mong muốn | Toast thông báo hệ thống đang bận |
 

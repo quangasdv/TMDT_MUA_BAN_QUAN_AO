@@ -76,6 +76,8 @@ export interface Combo {
   originalPrice: number;
   comboPrice: number;
   savedAmount: number;
+  clothingOriginalPrice?: number;
+  totalOriginalPrice?: number;
   items: ComboItem[];
 }
 

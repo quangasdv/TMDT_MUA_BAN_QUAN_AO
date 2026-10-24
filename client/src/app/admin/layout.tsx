@@ -17,6 +17,7 @@ import {
   X,
   Shield,
   UserCheck,
+  Sparkles,
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -54,6 +55,12 @@ export default function AdminLayout({
             label: "Sản phẩm",
             href: "/admin/products",
             icon: Shirt,
+            exact: false,
+          },
+          {
+            label: "Set đồ (Combo)",
+            href: "/admin/outfits",
+            icon: Sparkles,
             exact: false,
           },
           {

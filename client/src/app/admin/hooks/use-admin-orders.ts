@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAdminOrdersApi, updateOrderStatusApi } from "../api/admin.api";
+import { getAdminOrdersApi, updateOrderStatusApi, confirmOrderRefundApi } from "../api/admin.api";
 import { AdminOrder } from "../validation/admin.validation";
 import { useAuthStore } from "@/stores/auth.store";
 import { toast } from "react-toastify";
@@ -74,6 +74,27 @@ export function useAdminOrders() {
     },
   });
 
+  // Refund mutation (Hướng A)
+  const refundMutation = useMutation({
+    mutationFn: (orderId: string) => confirmOrderRefundApi(orderId),
+    onSuccess: (res, orderId) => {
+      toast.success(res.message || "Xác nhận hoàn tiền đơn hàng thành công!");
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      if (selectedOrderForDetail?.id === orderId) {
+        setSelectedOrderForDetail((prev) =>
+          prev ? { ...prev, paymentStatus: "REFUNDED" } : null
+        );
+      }
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || "Lỗi khi xác nhận hoàn tiền.";
+      toast.error(msg);
+    },
+  });
+
   // Client-side search filtering
   const filteredOrders = useMemo(() => {
     if (!searchQuery.trim()) return orders;
@@ -111,6 +132,8 @@ export function useAdminOrders() {
     isUpdating: statusMutation.isPending,
     updateStatus: (orderId: string, status: string) =>
       statusMutation.mutate({ orderId, status }),
+    isRefunding: refundMutation.isPending,
+    confirmRefund: (orderId: string) => refundMutation.mutate(orderId),
   };
 }
 

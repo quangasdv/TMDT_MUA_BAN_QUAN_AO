@@ -7,7 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAuthStore } from "@/stores/auth.store";
-import { useCart, FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE, CHECKOUT_SELECTED_STORAGE_KEY } from "../../cart/hooks/use-cart";
+import { useCart, CHECKOUT_SELECTED_STORAGE_KEY } from "../../cart/hooks/use-cart";
+import { getShippingRateByProvince, ShippingRate, FREE_SHIPPING_THRESHOLD } from "../data/vietnam-address.data";
 import { CartItem } from "../../cart/validation/cart.validation";
 import {
   checkoutFormSchema,
@@ -18,7 +19,8 @@ import {
 import { lockAndCheckoutApi, applyVoucherApi } from "../api/checkout.api";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/error";
 
-export function useCheckout() {
+export function useCheckout(options?: { selectedProvinceId?: string }) {
+  const selectedProvinceId = options?.selectedProvinceId;
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isInitialized } = useAuthStore();
@@ -87,9 +89,13 @@ export function useCheckout() {
     }
   }, [user, form]);
 
-  // Tính toán phí vận chuyển và tổng tiền
-  const isFreeShipping = subtotalPrice >= FREE_SHIPPING_THRESHOLD;
-  const shippingFee = items.length === 0 ? 0 : isFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
+  // Tính toán phí vận chuyển động theo phân vùng địa lý và tổng tiền
+  const shippingRate = useMemo(() => {
+    return getShippingRateByProvince(selectedProvinceId, subtotalPrice);
+  }, [selectedProvinceId, subtotalPrice]);
+
+  const isFreeShipping = shippingRate.fee === 0;
+  const shippingFee = items.length === 0 ? 0 : shippingRate.fee;
   const discountAmount = appliedVoucher?.discountAmount || 0;
   const finalTotal = Math.max(0, subtotalPrice - discountAmount + shippingFee);
 
@@ -215,6 +221,7 @@ export function useCheckout() {
     subtotalPrice,
     isFreeShipping,
     shippingFee,
+    shippingRate,
     discountAmount,
     finalTotal,
     appliedVoucher,

@@ -555,15 +555,17 @@ export default function CartPage() {
                 </span>
               </div>
 
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted-foreground items-center">
                 <span>Phí vận chuyển</span>
                 <span className="font-bold text-foreground">
                   {selectedItemCount === 0 ? (
-                    "0 đ"
+                    "—"
                   ) : selectedIsFreeShipping ? (
                     <span className="text-emerald-600 font-bold">Miễn phí</span>
                   ) : (
-                    formatPrice(selectedShippingFee)
+                    <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                      Tính khi đặt hàng
+                    </span>
                   )}
                 </span>
               </div>
@@ -575,7 +577,15 @@ export default function CartPage() {
                   Tổng thanh toán
                 </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {selectedItemCount > 0 ? `Cho ${selectedItemCount} món đã chọn` : "Chưa chọn sản phẩm"}
+                  {selectedItemCount > 0 ? (
+                    selectedIsFreeShipping ? (
+                      <span className="text-emerald-600 font-medium">Đã miễn phí vận chuyển</span>
+                    ) : (
+                      "Chưa gồm phí ship (tính khi đặt hàng)"
+                    )
+                  ) : (
+                    "Chưa chọn sản phẩm"
+                  )}
                 </span>
               </div>
               <span className="text-2xl font-black text-foreground tracking-tight">

@@ -122,8 +122,8 @@ export function useCart() {
   }, [items]);
 
   const isFreeShipping = subtotalPrice >= FREE_SHIPPING_THRESHOLD;
-  const shippingFee = items.length === 0 ? 0 : isFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
-  const finalTotal = subtotalPrice + shippingFee;
+  const shippingFee = items.length === 0 ? 0 : isFreeShipping ? 0 : 0;
+  const finalTotal = subtotalPrice;
 
   const amountNeededForFreeShipping = useMemo(() => {
     return Math.max(0, FREE_SHIPPING_THRESHOLD - subtotalPrice);
