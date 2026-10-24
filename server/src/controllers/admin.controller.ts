@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../config/db";
+import { OrderStatus } from "@prisma/client";
 
 export class AdminController {
   /**
@@ -95,13 +96,12 @@ export class AdminController {
         try {
           const updatedOrder = await prisma.$transaction(async (tx) => {
             // Chốt chặn nguyên tử: Chỉ hủy nếu đơn vẫn đang thực sự là PENDING_PAYMENT
-            const affected = await tx.$executeRaw`
-              UPDATE "Order"
-              SET "status" = 'CANCELLED'
-              WHERE "id" = ${id} AND "status" = 'PENDING_PAYMENT'
-            `;
+            const updateResult = await tx.order.updateMany({
+              where: { id, status: OrderStatus.PENDING_PAYMENT },
+              data: { status: OrderStatus.CANCELLED },
+            });
 
-            if (affected === 0) {
+            if (updateResult.count === 0) {
               throw new Error("CONFLICT_STATE");
             }
 
@@ -116,11 +116,14 @@ export class AdminController {
                 data: { status: "EXPIRED" },
               });
 
-              await tx.$executeRaw`
-                UPDATE "ProductVariant"
-                SET "stockQuantity" = "stockQuantity" + ${lock.quantity}
-                WHERE "id" = ${lock.variantId}
-              `;
+              await tx.productVariant.update({
+                where: { id: lock.variantId },
+                data: {
+                  stockQuantity: {
+                    increment: lock.quantity,
+                  },
+                },
+              });
             }
 
             return tx.order.findUnique({ where: { id } });
@@ -144,14 +147,18 @@ export class AdminController {
         }
       }
 
-      // Đổi trạng thái thông thường có kiểm tra điều kiện nguyên tử
-      const affected = await prisma.$executeRaw`
-        UPDATE "Order"
-        SET "status" = ${status}
-        WHERE "id" = ${id} AND "status" = ${order.status}
-      `;
+      // Đổi trạng thái thông thường có kiểm tra điều kiện nguyên tử (tránh race condition)
+      const updateResult = await prisma.order.updateMany({
+        where: {
+          id,
+          status: order.status,
+        },
+        data: {
+          status: status as OrderStatus,
+        },
+      });
 
-      if (affected === 0) {
+      if (updateResult.count === 0) {
         res.status(409).json({
           success: false,
           message: "Trạng thái đơn hàng đã bị thay đổi bởi thao tác khác. Vui lòng tải lại trang.",
