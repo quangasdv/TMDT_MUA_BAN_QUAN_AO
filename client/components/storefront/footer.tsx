@@ -100,7 +100,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/outfits" className="hover:text-foreground transition-colors">
-                  Bộ phối đồ Lookbook
+                  Combo Thời Trang Ưu Đãi
                 </Link>
               </li>
             </ul>

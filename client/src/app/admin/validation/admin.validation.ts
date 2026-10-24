@@ -326,7 +326,8 @@ export interface AdminVoucher {
   usageLimit: number;
   usedCount: number;
   expiresAt: string;
-  createdAt: string;
+  isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface AdminVouchersResponse {
@@ -343,6 +344,16 @@ export interface CreateVoucherPayload {
   minOrderValue?: number;
   usageLimit?: number;
   expiresAt: string;
+}
+
+export interface UpdateVoucherPayload {
+  code?: string;
+  discountType?: "PERCENT" | "FIXED";
+  discountValue?: number;
+  minOrderValue?: number;
+  usageLimit?: number;
+  expiresAt?: string;
+  isActive?: boolean;
 }
 
 export const createVoucherSchema = z.object({
@@ -370,3 +381,102 @@ export const createVoucherSchema = z.object({
     path: ["discountValue"],
   }
 );
+
+export const updateVoucherSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(3, "Mã voucher tối thiểu 3 ký tự")
+    .transform((val) => val.toUpperCase())
+    .optional(),
+  discountType: z.enum(["PERCENT", "FIXED"]).optional(),
+  discountValue: z.coerce.number().positive("Mức giảm giá phải lớn hơn 0").optional(),
+  minOrderValue: z.coerce.number().min(0, "Giá trị đơn tối thiểu không được âm").optional(),
+  usageLimit: z.coerce.number().int().positive("Lượt dùng tối đa phải là số nguyên dương").optional(),
+  expiresAt: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+/**
+ * 2.9.4 Kiểu dữ liệu Quản lý Tài khoản (GET /api/admin/users)
+ */
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string | null;
+  role: "CUSTOMER" | "STAFF" | "ADMIN";
+  createdAt: string;
+  _count?: {
+    orders: number;
+  };
+}
+
+export interface AdminUsersResponse {
+  success: boolean;
+  data: {
+    users: AdminUser[];
+    pagination: AdminOrdersPagination;
+  };
+}
+
+export interface CreateUserPayload {
+  email: string;
+  password: string;
+  fullName: string;
+  phone?: string;
+  role?: "CUSTOMER" | "STAFF" | "ADMIN";
+}
+
+export interface UpdateUserPayload {
+  fullName?: string;
+  phone?: string | null;
+  role?: "CUSTOMER" | "STAFF" | "ADMIN";
+  password?: string;
+}
+
+export const createUserSchema = z.object({
+  email: z.string().trim().email("Email không đúng định dạng"),
+  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+  fullName: z.string().trim().min(2, "Họ và tên tối thiểu 2 ký tự"),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^0[35789][0-9]{8}$/, "Số điện thoại phải có 10 chữ số và bắt đầu bằng 03, 05, 07, 08, 09")
+    .optional()
+    .or(z.literal("")),
+  role: z.enum(["CUSTOMER", "STAFF", "ADMIN"]).default("STAFF"),
+});
+
+export const updateUserSchema = z.object({
+  fullName: z.string().trim().min(2, "Họ và tên tối thiểu 2 ký tự").optional(),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^0[35789][0-9]{8}$/, "Số điện thoại phải có 10 chữ số và bắt đầu bằng 03, 05, 07, 08, 09")
+    .optional()
+    .or(z.literal("")),
+  role: z.enum(["CUSTOMER", "STAFF", "ADMIN"]).optional(),
+  password: z.string().min(6, "Mật khẩu mới tối thiểu 6 ký tự").optional().or(z.literal("")),
+});
+
+export const USER_ROLE_LABELS: Record<
+  string,
+  { label: string; colorClass: string; bgClass: string }
+> = {
+  ADMIN: {
+    label: "Quản trị viên",
+    colorClass: "text-purple-900",
+    bgClass: "bg-purple-50 border-purple-300",
+  },
+  STAFF: {
+    label: "Nhân viên",
+    colorClass: "text-blue-900",
+    bgClass: "bg-blue-50 border-blue-300",
+  },
+  CUSTOMER: {
+    label: "Khách hàng",
+    colorClass: "text-slate-800",
+    bgClass: "bg-slate-100 border-slate-300",
+  },
+};

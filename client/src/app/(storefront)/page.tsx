@@ -88,7 +88,7 @@ export default function HomePage() {
                   className={cn(buttonVariants({ size: "lg", variant: "outline" }), "h-12 px-6 text-sm font-semibold gap-2")}
                 >
                   <Layers size={16} />
-                  Phối đồ Lookbook 2D
+                  Combo Thời Trang Ưu Đãi
                 </Link>
               </div>
 
@@ -259,15 +259,15 @@ export default function HomePage() {
                 CÔNG NGHỆ THỜI TRANG ĐỘC QUYỀN
               </Badge>
               <h2 className="text-2xl sm:text-3xl font-black text-foreground">
-                Trải nghiệm phòng phối đồ tương tác 2D & Tư vấn kích cỡ thông minh
+                Mua theo Combo Thời Trang & Tư vấn kích cỡ thông minh
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Tự do kéo ghép áo, quần, áo khoác và giày trực quan trên khung canvas xếp lớp. Áp dụng ngay chiết khấu combo 15% khi thêm trọn bộ vào giỏ hàng, đồng thời thuật toán Smart Fit Advisor tính toán độ vừa vặn chuẩn xác đến 95%.
+                Khám phá các set combo thời trang phối sẵn với giá trọn gói ưu đãi hấp dẫn rẻ hơn mua lẻ từng món, đồng thời kết hợp thuật toán Smart Fit Advisor tính toán độ vừa vặn chuẩn xác đến 95%.
               </p>
               <div className="pt-2 flex flex-wrap gap-3">
                 <Link href="/outfits" className={cn(buttonVariants({ size: "default" }), "gap-2")}>
                   <Layers size={16} />
-                  Mở phòng phối đồ 2D
+                  Khám phá Combo thời trang
                 </Link>
                 <Link href="/products" className={cn(buttonVariants({ variant: "outline", size: "default" }))}>
                   Xem hướng dẫn chọn size

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { RoleGuard } from "@/components/auth/role-guard";
 import { useAdminVouchers } from "../hooks/use-admin-vouchers";
-import { AdminVoucher } from "../validation/admin.validation";
+import { AdminVoucher, UpdateVoucherPayload } from "../validation/admin.validation";
 import {
   TicketPercent,
   Plus,
@@ -14,6 +14,9 @@ import {
   X,
   Clock,
   Search,
+  Edit3,
+  Ban,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,12 +32,29 @@ export default function AdminVouchersPage() {
     isError,
     error,
     refetch,
+    // Create
     isCreateModalOpen,
     setIsCreateModalOpen,
     createForm,
     setCreateForm,
     createVoucher,
     isCreating,
+    // Edit
+    isEditModalOpen,
+    setIsEditModalOpen,
+    voucherToEdit,
+    editForm,
+    setEditForm,
+    openEditModal,
+    updateVoucher,
+    isUpdating,
+    // Deactivate
+    isConfirmDeactivateOpen,
+    setIsConfirmDeactivateOpen,
+    voucherToDeactivate,
+    openDeactivateModal,
+    confirmDeactivate,
+    isDeleting,
   } = useAdminVouchers();
 
   // Lazy state initializer to ensure component render purity
@@ -75,6 +95,52 @@ export default function AdminVouchersPage() {
     });
   };
 
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!voucherToEdit) return;
+
+    const payload: UpdateVoucherPayload = {};
+
+    if (editForm.code && editForm.code.trim()) {
+      payload.code = editForm.code.trim().toUpperCase();
+    }
+
+    if (editForm.discountType) {
+      payload.discountType = editForm.discountType;
+    }
+
+    if (editForm.discountValue !== undefined) {
+      const val = Number(editForm.discountValue);
+      if (!Number.isFinite(val) || val <= 0) {
+        toast.error("Mức giảm giá phải lớn hơn 0.");
+        return;
+      }
+      if (editForm.discountType === "PERCENT" && val > 100) {
+        toast.error("Giảm theo phần trăm không được vượt quá 100%.");
+        return;
+      }
+      payload.discountValue = val;
+    }
+
+    if (editForm.minOrderValue !== undefined) {
+      payload.minOrderValue = Number(editForm.minOrderValue || 0);
+    }
+
+    if (editForm.usageLimit !== undefined) {
+      payload.usageLimit = Number(editForm.usageLimit || 100);
+    }
+
+    if (editForm.expiresAt) {
+      payload.expiresAt = new Date(editForm.expiresAt).toISOString();
+    }
+
+    if (editForm.isActive !== undefined) {
+      payload.isActive = editForm.isActive;
+    }
+
+    updateVoucher(voucherToEdit.id, payload);
+  };
+
   const formatVND = (val: number | string) => {
     const num = typeof val === "string" ? parseFloat(val) : val;
     return new Intl.NumberFormat("vi-VN", {
@@ -97,6 +163,13 @@ export default function AdminVouchersPage() {
   };
 
   const getVoucherStatus = (v: AdminVoucher) => {
+    if (v.isActive === false) {
+      return {
+        label: "Đã vô hiệu hóa",
+        colorClass: "bg-slate-100 text-slate-700 border-slate-300",
+      };
+    }
+
     const isExpired = new Date(v.expiresAt).getTime() < currentTimestamp;
     const isExhausted = v.usedCount >= v.usageLimit;
 
@@ -202,6 +275,7 @@ export default function AdminVouchersPage() {
                 <th>Tiến độ sử dụng</th>
                 <th>Hạn sử dụng</th>
                 <th>Trạng thái</th>
+                <th className="text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -226,11 +300,14 @@ export default function AdminVouchersPage() {
                     <td>
                       <Skeleton className="h-6 w-20 rounded-full bg-slate-200" />
                     </td>
+                    <td className="text-right">
+                      <Skeleton className="h-8 w-16 ml-auto bg-slate-200" />
+                    </td>
                   </tr>
                 ))
               ) : vouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-600">
+                  <td colSpan={7} className="text-center py-12 text-slate-600">
                     <TicketPercent size={40} className="mx-auto text-slate-400 mb-2" />
                     <p className="font-bold text-slate-800 text-base">
                       Không tìm thấy voucher nào
@@ -247,9 +324,10 @@ export default function AdminVouchersPage() {
                     100,
                     Math.round((voucher.usedCount / voucher.usageLimit) * 100)
                   );
+                  const isDeactivated = voucher.isActive === false;
 
                   return (
-                    <tr key={voucher.id}>
+                    <tr key={voucher.id} className={isDeactivated ? "opacity-60 bg-slate-50/50" : ""}>
                       {/* Code */}
                       <td>
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-900 border border-slate-300 font-mono font-black text-sm tracking-wide shadow-xs">
@@ -309,6 +387,34 @@ export default function AdminVouchersPage() {
                         >
                           {status.label}
                         </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditModal(voucher)}
+                            className="h-8 px-2.5 text-xs font-semibold text-slate-800 border-slate-300 hover:bg-slate-100 gap-1"
+                            title="Chỉnh sửa voucher"
+                          >
+                            <Edit3 size={13} />
+                            <span>Sửa</span>
+                          </Button>
+                          {!isDeactivated && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeactivateModal(voucher)}
+                              className="h-8 px-2.5 text-xs font-semibold text-rose-700 border-rose-200 hover:bg-rose-50 gap-1"
+                              title="Vô hiệu hóa voucher"
+                            >
+                              <Ban size={13} />
+                              <span className="hidden sm:inline">Vô hiệu hóa</span>
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -520,6 +626,290 @@ export default function AdminVouchersPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: CHỈNH SỬA VOUCHER (PUT /api/admin/vouchers/:id) */}
+        {isEditModalOpen && voucherToEdit && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-5 text-slate-900">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-900 flex items-center justify-center font-bold">
+                    <Edit3 size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      Chỉnh sửa Voucher
+                    </h3>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Cập nhật thông tin mã voucher {voucherToEdit.code}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitEdit} className="space-y-4">
+                {/* Voucher code */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-800">
+                    Mã Voucher
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.code || ""}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        code: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-mono font-black tracking-wider text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 uppercase"
+                  />
+                </div>
+
+                {/* Discount type selection */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-800 block">
+                    Hình thức giảm giá
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          discountType: "PERCENT",
+                        }))
+                      }
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                        editForm.discountType === "PERCENT"
+                          ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Percent size={14} />
+                      Theo phần trăm (%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          discountType: "FIXED",
+                        }))
+                      }
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-bold transition cursor-pointer ${
+                        editForm.discountType === "FIXED"
+                          ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <DollarSign size={14} />
+                      Số tiền cố định (VND)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Discount Value */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-800">
+                    Mức giảm ({editForm.discountType === "PERCENT" ? "%" : "VND"})
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={editForm.discountType === "PERCENT" ? 100 : undefined}
+                    step={editForm.discountType === "PERCENT" ? 1 : 1000}
+                    value={editForm.discountValue ?? ""}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        discountValue: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Min order value */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      Đơn tối thiểu (VND)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1000}
+                      value={editForm.minOrderValue ?? ""}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          minOrderValue: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                    />
+                  </div>
+
+                  {/* Usage limit */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      Lượt dùng tối đa
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={editForm.usageLimit ?? ""}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          usageLimit: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                    />
+                  </div>
+                </div>
+
+                {/* Expiration date */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-800">
+                    Thời hạn hiệu lực
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.expiresAt || ""}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        expiresAt: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900"
+                  />
+                </div>
+
+                {/* Active toggle */}
+                <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">Kích hoạt mã giảm giá</p>
+                    <p className="text-[11px] text-slate-600">Cho phép người mua áp dụng khi thanh toán</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isActive ?? true}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          isActive: e.target.checked,
+                        }))
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                  </label>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditModalOpen(false)}
+                    disabled={isUpdating}
+                    className="border-slate-300 text-slate-800 font-semibold"
+                  >
+                    Hủy bỏ
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isUpdating}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold min-w-[120px] shadow-xs cursor-pointer"
+                  >
+                    {isUpdating ? (
+                      <RefreshCw size={14} className="animate-spin mr-1.5" />
+                    ) : null}
+                    Lưu thay đổi
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: XÁC NHẬN VÔ HIỆU HÓA VOUCHER (DELETE /api/admin/vouchers/:id) */}
+        {isConfirmDeactivateOpen && voucherToDeactivate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-4 text-slate-900">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold shrink-0">
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Vô hiệu hóa Voucher?
+                  </h3>
+                  <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    Hành động này sẽ ẩn mã giảm giá và ngăn khách hàng tiếp tục sử dụng.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Mã voucher:</span>
+                  <span className="font-mono font-bold text-slate-900">{voucherToDeactivate.code}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Mức giảm:</span>
+                  <span className="font-semibold text-slate-900">
+                    {voucherToDeactivate.discountType === "PERCENT"
+                      ? `${voucherToDeactivate.discountValue}%`
+                      : formatVND(voucherToDeactivate.discountValue)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsConfirmDeactivateOpen(false)}
+                  disabled={isDeleting}
+                  className="border-slate-300 text-slate-800 font-semibold"
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => confirmDeactivate(voucherToDeactivate.id)}
+                  disabled={isDeleting}
+                  className="bg-rose-600 hover:bg-rose-700 text-white font-bold shadow-xs cursor-pointer"
+                >
+                  {isDeleting ? (
+                    <RefreshCw size={14} className="animate-spin mr-1.5" />
+                  ) : null}
+                  Xác nhận vô hiệu hóa
+                </Button>
+              </div>
             </div>
           </div>
         )}

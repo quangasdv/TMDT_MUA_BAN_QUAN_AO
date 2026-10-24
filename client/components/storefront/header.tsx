@@ -59,7 +59,10 @@ export function Header() {
     <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/90 backdrop-blur-md transition-all">
       {/* Top Banner Thông Báo */}
       <div className="hidden sm:block bg-muted/60 py-1.5 text-center text-xs text-muted-foreground border-b border-border/40 font-medium">
-        <span>Miễn phí giao hàng cho đơn từ 499.000 ₫ · Đổi trả miễn phí trong 7 ngày</span>
+        <span>
+          Miễn phí giao hàng cho đơn từ 499.000 ₫ · Đổi trả miễn phí trong 7
+          ngày
+        </span>
       </div>
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 h-16 sm:h-20">
@@ -79,7 +82,10 @@ export function Header() {
               TF
             </span>
             <span className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              Trendy<span className="text-primary-foreground bg-primary px-1 rounded ml-0.5">Fit</span>
+              Trendy
+              <span className="text-primary-foreground bg-primary px-1 rounded ml-0.5">
+                Fit
+              </span>
             </span>
           </Link>
         </div>
@@ -109,7 +115,7 @@ export function Header() {
             className="flex items-center gap-1.5 text-primary-foreground font-semibold bg-primary/20 hover:bg-primary/30 px-2.5 py-1 rounded-full text-xs transition-colors"
           >
             <Layers size={13} />
-            Phòng phối đồ
+            Combo thời trang
           </Link>
         </nav>
 
@@ -155,7 +161,9 @@ export function Header() {
                   className="flex items-center gap-2 rounded-full border border-slate-200 bg-white pl-1.5 pr-2.5 sm:pr-3 py-1 text-xs font-semibold text-slate-800 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-xs"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground font-black text-[11px] shadow-xs">
-                    {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                    {user.fullName
+                      ? user.fullName.charAt(0).toUpperCase()
+                      : "U"}
                   </span>
                   <span className="hidden sm:inline-block max-w-[120px] truncate text-slate-900 font-bold">
                     {user.fullName}
@@ -164,7 +172,7 @@ export function Header() {
                     size={13}
                     className={cn(
                       "text-slate-400 transition-transform duration-200",
-                      userMenuOpen && "rotate-180 text-slate-800"
+                      userMenuOpen && "rotate-180 text-slate-800",
                     )}
                   />
                 </button>
@@ -179,33 +187,43 @@ export function Header() {
                     />
 
                     {/* Dropdown Menu Container */}
-                    <div
-                      className="absolute right-0 mt-2.5 w-64 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-2xl z-50 text-xs animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
-                    >
+                    <div className="absolute right-0 mt-2.5 w-64 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-2xl z-50 text-xs animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
                       {/* User Header Profile Card */}
                       <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2">
                         <div className="flex items-center gap-2.5">
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-black text-sm shadow-xs">
-                            {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                            {user.fullName
+                              ? user.fullName.charAt(0).toUpperCase()
+                              : "U"}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <p className="font-bold text-slate-900 truncate text-xs">{user.fullName}</p>
-                            <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                            <p className="font-bold text-slate-900 truncate text-xs">
+                              {user.fullName}
+                            </p>
+                            <p className="text-[11px] text-slate-500 truncate">
+                              {user.email}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-200/70 text-[10px]">
-                          <span className="text-slate-500 font-medium">Vai trò:</span>
+                          <span className="text-slate-500 font-medium">
+                            Vai trò:
+                          </span>
                           <span
                             className={cn(
                               "font-bold px-2 py-0.5 rounded-full uppercase tracking-wider text-[10px]",
                               user.role === "ADMIN"
                                 ? "bg-purple-100 text-purple-900 border border-purple-300"
                                 : user.role === "STAFF"
-                                ? "bg-blue-100 text-blue-900 border border-blue-300"
-                                : "bg-primary/30 text-slate-900 border border-primary/50"
+                                  ? "bg-blue-100 text-blue-900 border border-blue-300"
+                                  : "bg-primary/30 text-slate-900 border border-primary/50",
                             )}
                           >
-                            {user.role === "ADMIN" ? "Quản trị viên" : user.role === "STAFF" ? "Nhân viên" : "Khách hàng"}
+                            {user.role === "ADMIN"
+                              ? "Quản trị viên"
+                              : user.role === "STAFF"
+                                ? "Nhân viên"
+                                : "Khách hàng"}
                           </span>
                         </div>
                       </div>
@@ -214,7 +232,7 @@ export function Header() {
                       <div className="space-y-1">
                         {(user.role === "ADMIN" || user.role === "STAFF") && (
                           <Link
-                            href="/admin"
+                            href="/admin/orders"
                             onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold transition-all group"
                           >
@@ -244,7 +262,7 @@ export function Header() {
                           <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-700 group-hover:bg-slate-200">
                             <Layers size={13} />
                           </div>
-                          <span>Phòng phối đồ 2D</span>
+                          <span>Combo thời trang ưu đãi</span>
                         </Link>
                       </div>
 
@@ -269,13 +287,19 @@ export function Header() {
               <div className="flex items-center gap-1 sm:gap-2">
                 <Link
                   href="/login"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-xs h-8 px-2.5")}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "text-xs h-8 px-2.5",
+                  )}
                 >
                   Đăng nhập
                 </Link>
                 <Link
                   href="/register"
-                  className={cn(buttonVariants({ size: "sm" }), "hidden sm:inline-flex text-xs h-8 px-3")}
+                  className={cn(
+                    buttonVariants({ size: "sm" }),
+                    "hidden sm:inline-flex text-xs h-8 px-3",
+                  )}
                 >
                   Đăng ký
                 </Link>
@@ -364,7 +388,7 @@ export function Header() {
               className="flex items-center gap-2 py-2 text-primary-foreground font-semibold bg-primary/20 px-3 rounded-lg mt-2"
             >
               <Layers size={16} />
-              Phòng phối đồ tương tác 2D
+              Combo thời trang ưu đãi
             </Link>
           </div>
         </div>

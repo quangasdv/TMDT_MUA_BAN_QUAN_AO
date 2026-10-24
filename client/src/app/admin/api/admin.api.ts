@@ -9,7 +9,12 @@ import {
   AdminProduct,
   AdminVouchersResponse,
   CreateVoucherPayload,
+  UpdateVoucherPayload,
   AdminVoucher,
+  AdminUsersResponse,
+  CreateUserPayload,
+  UpdateUserPayload,
+  AdminUser,
 } from "../validation/admin.validation";
 
 /**
@@ -136,6 +141,98 @@ export const createAdminVoucherApi = async (
     message: string;
     data: { voucher: AdminVoucher };
   }>("/admin/vouchers", payload);
+  return response.data;
+};
+
+/**
+ * 10. Cập nhật thông tin Voucher (Chỉ ADMIN)
+ * PUT /api/admin/vouchers/:id
+ */
+export const updateAdminVoucherApi = async (
+  voucherId: string,
+  payload: UpdateVoucherPayload
+): Promise<{ success: boolean; message: string; data: { voucher: AdminVoucher } }> => {
+  const response = await baseAPI.put<{
+    success: boolean;
+    message: string;
+    data: { voucher: AdminVoucher };
+  }>(`/admin/vouchers/${encodeURIComponent(voucherId)}`, payload);
+  return response.data;
+};
+
+/**
+ * 11. Vô hiệu hóa Voucher (Chỉ ADMIN)
+ * DELETE /api/admin/vouchers/:id
+ */
+export const deleteAdminVoucherApi = async (
+  voucherId: string
+): Promise<{ success: boolean; message: string; data: { voucher: AdminVoucher } }> => {
+  const response = await baseAPI.delete<{
+    success: boolean;
+    message: string;
+    data: { voucher: AdminVoucher };
+  }>(`/admin/vouchers/${encodeURIComponent(voucherId)}`);
+  return response.data;
+};
+
+/**
+ * 12. Lấy danh sách tài khoản Người dùng & Nhân viên (Chỉ ADMIN)
+ * GET /api/admin/users
+ */
+export const getAdminUsersApi = async (params?: {
+  role?: string;
+  q?: string;
+  page?: number | string;
+  limit?: number | string;
+}): Promise<AdminUsersResponse> => {
+  const queryParams: Record<string, string | number> = {};
+  if (params?.role && params.role !== "ALL") {
+    queryParams.role = params.role;
+  }
+  if (params?.q && params.q.trim()) {
+    queryParams.q = params.q.trim();
+  }
+  if (params?.page) {
+    queryParams.page = params.page;
+  }
+  if (params?.limit) {
+    queryParams.limit = params.limit;
+  }
+
+  const response = await baseAPI.get<AdminUsersResponse>("/admin/users", {
+    params: queryParams,
+  });
+  return response.data;
+};
+
+/**
+ * 13. Tạo tài khoản mới từ Admin (Chỉ ADMIN)
+ * POST /api/admin/users
+ */
+export const createAdminUserApi = async (
+  payload: CreateUserPayload
+): Promise<{ success: boolean; message: string; data: { user: AdminUser } }> => {
+  const response = await baseAPI.post<{
+    success: boolean;
+    message: string;
+    data: { user: AdminUser };
+  }>("/admin/users", payload);
+  return response.data;
+};
+
+/**
+ * 14. Cập nhật thông tin tài khoản người dùng/nhân viên (Chỉ ADMIN)
+ * PUT /api/admin/users/:id
+ */
+export const updateAdminUserApi = async (
+  userId: string,
+  payload: UpdateUserPayload
+): Promise<{ success: boolean; message: string; data: { user: AdminUser } }> => {
+  const response = await baseAPI.put<{
+    success: boolean;
+    message: string;
+    data: { user: AdminUser };
+  }>(`/admin/users/${encodeURIComponent(userId)}`, payload);
   return response.data;
 };
 

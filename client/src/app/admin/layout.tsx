@@ -10,6 +10,7 @@ import {
   Package,
   Shirt,
   TicketPercent,
+  Users,
   ExternalLink,
   LogOut,
   Menu,
@@ -59,6 +60,12 @@ export default function AdminLayout({
             label: "Mã giảm giá",
             href: "/admin/vouchers",
             icon: TicketPercent,
+            exact: false,
+          },
+          {
+            label: "Tài khoản",
+            href: "/admin/users",
+            icon: Users,
             exact: false,
           },
         ]
