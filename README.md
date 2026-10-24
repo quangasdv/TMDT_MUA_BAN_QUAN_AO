@@ -401,7 +401,8 @@ model Voucher {
 * `GET /api/products?q=&category=&minPrice=&maxPrice=&color=&size=&page=&limit=` - Tìm kiếm từ khóa và lọc sản phẩm
 * `GET /api/products/:slug` - Chi tiết sản phẩm, danh sách biến thể SKU và Size Chart
 * `GET /api/categories` - Danh mục sản phẩm
-* `GET /api/outfits` - Danh sách bộ phối Lookbook
+* `GET /api/combos` (hoặc `/api/outfits`) - Danh sách các Combo / Set thời trang ưu đãi (Áo + Quần) kèm giá lẻ, tỷ lệ giảm giá và giá combo tiết kiệm
+* `GET /api/combos/:id` - Chi tiết Combo kèm chọn biến thể màu sắc, kích cỡ trước khi mua cả set
 * `GET /api/outfits/slots` - Danh sách sản phẩm phân loại theo tầng phối đồ (Top, Bottom, Shoes, Outerwear)
 * `POST /api/fit-advisor/recommend` - Thuật toán tính độ vừa vặn và khuyến nghị size
 * `GET /api/cart` - Lấy thông tin giỏ hàng
@@ -409,7 +410,7 @@ model Voucher {
 * `PATCH /api/cart/items/:id` - Cập nhật số lượng món trong giỏ hàng
 * `DELETE /api/cart/items/:id` - Xóa món khỏi giỏ
 * `POST /api/vouchers/apply` - Kiểm tra tính hợp lệ của mã giảm giá và tính toán số tiền giảm trước khi checkout
-* `POST /api/checkout/lock` - Tạo đơn hàng, áp voucher và khóa giữ kho tạm thời 10 phút (Yêu cầu đăng nhập)
+* `POST /api/checkout` (hoặc `/api/checkout/lock`) - Tạo đơn hàng (Hỗ trợ quét mã QR PayOS giữ kho 10 phút hoặc Thanh toán khi nhận hàng COD chuẩn bị đơn ngay, tự động đối soát thanh toán khi giao thành công)
 * `GET /api/orders` - Danh sách đơn hàng của khách hàng hiện tại
 * `GET /api/orders/:code` - Tra cứu trạng thái chi tiết đơn hàng theo mã
 * `POST /api/payments/create-qr` - Sinh mã VietQR (qua PayOS hoặc Mock Engine)
@@ -417,14 +418,22 @@ model Voucher {
 * `POST /api/payments/mock-simulate` - Kích hoạt giả lập thanh toán (chỉ cho phép khi dev/demo, yêu cầu đăng nhập chính chủ, tự động ký chữ ký HMAC-SHA256 rồi gọi vào webhook handler)
 
 ### 7.2. Phân hệ Quản trị (Admin & Staff API)
+* **Quy chuẩn phân quyền RBAC:**
+  - **`STAFF` (Nhân viên vận hành & kho):** Chỉ quản lý và cập nhật tiến trình đơn hàng theo quy trình đóng hàng/giao hàng. Tuyệt đối không xem doanh thu, không tạo/sửa voucher, không sửa giá sản phẩm, không quản lý tài khoản.
+  - **`ADMIN` (Quản trị viên tối cao / Chủ shop):** Toàn quyền kiểm soát hệ thống: đơn hàng, sản phẩm, hình ảnh, voucher, phân quyền tài khoản người dùng/nhân viên, và báo cáo doanh thu tài chính.
 * `GET /api/admin/orders` - Quản lý danh sách đơn hàng (Quyền: **`ADMIN`** và **`STAFF`**)
-* `PATCH /api/admin/orders/:id/status` - Cập nhật trạng thái đơn hàng (`PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`) (Quyền: **`ADMIN`** và **`STAFF`**)
+* `PATCH /api/admin/orders/:id/status` - Cập nhật trạng thái đơn hàng theo State Machine (`PROCESSING`, `SHIPPING`, `DELIVERED`, `CANCELLED`; tự động đánh dấu đã thanh toán khi giao đơn COD thành công) (Quyền: **`ADMIN`** và **`STAFF`**)
 * `GET /api/admin/products` - Danh sách quản lý sản phẩm (Quyền: **`ADMIN`**)
 * `POST /api/admin/products` - Thêm mới sản phẩm và các biến thể SKU (Quyền: **`ADMIN`**)
-* `PUT /api/admin/products/:id` - Cập nhật sản phẩm, tồn kho biến thể (Quyền: **`ADMIN`**)
+* `PUT /api/admin/products/:id` - Cập nhật thông tin sản phẩm, cập nhật link hình ảnh (`imageUrl`) và biến thể tồn kho (Quyền: **`ADMIN`**)
 * `DELETE /api/admin/products/:id` - Ẩn/xóa sản phẩm (Quyền: **`ADMIN`**)
 * `GET /api/admin/vouchers` - Danh sách mã giảm giá (Quyền: **`ADMIN`**)
-* `POST /api/admin/vouchers` - Tạo mã giảm giá mới (Quyền: **`ADMIN`**)
+* `POST /api/admin/vouchers` - Tạo mã giảm giá mới (Ràng buộc ngày hết hạn phải trong tương lai) (Quyền: **`ADMIN`**)
+* `PUT /api/admin/vouchers/:id` - Cập nhật thông tin voucher, gia hạn thời gian, đổi mức giảm (Quyền: **`ADMIN`**)
+* `DELETE /api/admin/vouchers/:id` - Vô hiệu hóa mã giảm giá (Quyền: **`ADMIN`**)
+* `GET /api/admin/users` - Quản lý danh sách tài khoản khách hàng và nhân viên (Lọc role, tìm kiếm, phân trang) (Quyền: **`ADMIN`**)
+* `POST /api/admin/users` - Tạo tài khoản mới, phân vai trò STAFF/CUSTOMER/ADMIN (Bảo mật bcrypt, validate SĐT 10 số) (Quyền: **`ADMIN`**)
+* `PUT /api/admin/users/:id` - Cập nhật thông tin tài khoản, đổi vai trò, đổi mật khẩu (Quyền: **`ADMIN`**)
 * `GET /api/admin/stats` - Báo cáo tổng quan doanh thu, số lượng đơn (Quyền: **`ADMIN`**)
 
 ---
