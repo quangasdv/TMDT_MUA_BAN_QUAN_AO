@@ -99,6 +99,7 @@ export default function AdminProductsPage() {
 
   // Upload states
   const [isUploadingEditImage, setIsUploadingEditImage] = React.useState(false);
+  const [uploadingEditVariantIndex, setUploadingEditVariantIndex] = React.useState<number | null>(null);
   const [uploadingVariantIndex, setUploadingVariantIndex] = React.useState<number | null>(null);
   const [isUploadingMainImage, setIsUploadingMainImage] = React.useState(false);
 
@@ -109,13 +110,41 @@ export default function AdminProductsPage() {
     try {
       setIsUploadingEditImage(true);
       const url = await uploadImageApi(file);
-      setUpdateForm((prev) => ({ ...prev, imageUrl: url }));
+      setUpdateForm((prev) => ({
+        ...prev,
+        imageUrl: url,
+        variants: (prev.variants || []).map((v) => ({
+          ...v,
+          imageUrl: (!v.imageUrl || v.imageUrl === prev.imageUrl) ? url : v.imageUrl,
+        })),
+      }));
       toast.success("Tải ảnh sản phẩm thành công!");
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lỗi khi tải ảnh lên.";
       toast.error(msg);
     } finally {
       setIsUploadingEditImage(false);
+      e.target.value = "";
+    }
+  };
+
+  // Upload handler for variant in Edit Modal
+  const handleUploadEditVariantImage = async (
+    idx: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingEditVariantIndex(idx);
+      const url = await uploadImageApi(file);
+      handleUpdateEditVariantField(idx, "imageUrl", url);
+      toast.success(`Đã tải ảnh cho biến thể #${idx + 1}!`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Lỗi khi tải ảnh lên.";
+      toast.error(msg);
+    } finally {
+      setUploadingEditVariantIndex(null);
       e.target.value = "";
     }
   };
@@ -349,6 +378,7 @@ export default function AdminProductsPage() {
         ...v,
         priceAdjustment: Number(v.priceAdjustment || 0),
         stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0),
+        imageUrl: (v.imageUrl && String(v.imageUrl).trim()) ? String(v.imageUrl).trim() : updateForm.imageUrl,
       })),
     });
   };
@@ -1159,9 +1189,17 @@ export default function AdminProductsPage() {
                       <input
                         type="text"
                         value={updateForm.imageUrl || ""}
-                        onChange={(e) =>
-                          setUpdateForm((prev) => ({ ...prev, imageUrl: e.target.value }))
-                        }
+                        onChange={(e) => {
+                          const newUrl = e.target.value;
+                          setUpdateForm((prev) => ({
+                            ...prev,
+                            imageUrl: newUrl,
+                            variants: (prev.variants || []).map((v) => ({
+                              ...v,
+                              imageUrl: (!v.imageUrl || v.imageUrl === prev.imageUrl) ? newUrl : v.imageUrl,
+                            })),
+                          }));
+                        }}
                         placeholder="Hoặc dán trực tiếp link URL ảnh..."
                         className="w-full px-2.5 py-1 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
@@ -1300,6 +1338,51 @@ export default function AdminProductsPage() {
                                 title="Xóa biến thể này"
                               >
                                 <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Hình ảnh riêng cho biến thể này */}
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-300 bg-white shrink-0 shadow-2xs">
+                            <img
+                              src={v.imageUrl || updateForm.imageUrl || "/outfits/placeholder.png"}
+                              alt="Ảnh biến thể"
+                              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/outfits/placeholder.png"; }}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 flex items-center gap-1.5">
+                            <label className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-bold cursor-pointer transition shrink-0 border border-slate-300">
+                              {uploadingEditVariantIndex === idx ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : (
+                                <Upload size={11} />
+                              )}
+                              <span>{uploadingEditVariantIndex === idx ? "Tải..." : "Tải ảnh"}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingEditVariantIndex === idx}
+                                onChange={(e) => handleUploadEditVariantImage(idx, e)}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={v.imageUrl || ""}
+                              onChange={(e) => handleUpdateEditVariantField(idx, "imageUrl", e.target.value)}
+                              placeholder="URL ảnh riêng (để trống sẽ dùng ảnh sản phẩm ở trên)..."
+                              className="flex-1 px-2 py-1 text-[11px] rounded-md border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                            />
+                            {v.imageUrl && v.imageUrl !== updateForm.imageUrl && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateEditVariantField(idx, "imageUrl", "")}
+                                className="text-[10px] text-rose-600 hover:underline shrink-0"
+                              >
+                                Đặt lại
                               </button>
                             )}
                           </div>

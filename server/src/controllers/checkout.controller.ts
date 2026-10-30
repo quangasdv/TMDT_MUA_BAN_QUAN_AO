@@ -402,7 +402,25 @@ export class CheckoutController {
         return;
       }
 
-      res.status(200).json({ success: true, data: { order } });
+      // Phân tách minh bạch chiết khấu Voucher và ưu đãi Combo thời trang
+      let voucherDiscount = 0;
+      if (order.voucher) {
+        if (order.voucher.discountType === "PERCENT") {
+          voucherDiscount = Math.round(Number(order.totalAmount) * (Number(order.voucher.discountValue) / 100));
+        } else {
+          voucherDiscount = Number(order.voucher.discountValue);
+        }
+        voucherDiscount = Math.min(voucherDiscount, Number(order.discountAmount));
+      }
+      const comboDiscount = Math.max(0, Number(order.discountAmount) - voucherDiscount);
+
+      const orderData = {
+        ...order,
+        voucherDiscount,
+        comboDiscount,
+      };
+
+      res.status(200).json({ success: true, data: { order: orderData } });
     } catch (error) {
       next(error);
     }

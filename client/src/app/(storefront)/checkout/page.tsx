@@ -639,50 +639,57 @@ export default function CheckoutPage() {
                     </p>
                   )}
 
-                  {/* Dynamic Suggestion Chips từ Database */}
-                  <div className="flex items-center gap-2 flex-wrap pt-1">
-                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Sparkles size={12} className="text-amber-500" /> Gợi ý voucher:
-                    </span>
-                    {activeVouchers.length > 0 ? (
-                      activeVouchers.map((v) => {
-                        const discountLabel =
-                          v.discountType === "PERCENT"
-                            ? `-${v.discountValue}%`
-                            : `-${Number(v.discountValue) >= 1000 ? `${Math.round(Number(v.discountValue) / 1000)}k` : `${v.discountValue}đ`}`;
-                        const minOrder = Number(v.minOrderValue) > 0 ? ` (Đơn từ ${Math.round(Number(v.minOrderValue) / 1000)}k)` : "";
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => applyVoucher(v.code)}
-                            className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200 cursor-pointer transition-colors flex items-center gap-1 shadow-xs"
-                            title={`Hết hạn: ${new Date(v.expiresAt).toLocaleDateString("vi-VN")}${minOrder}`}
-                          >
-                            <span className="font-bold text-amber-800">{v.code}</span>
-                            <span className="text-[10px] text-amber-600">({discountLabel})</span>
-                          </button>
-                        );
-                      })
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => applyVoucher("WELCOME2026")}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
-                        >
-                          WELCOME2026 (-20%)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyVoucher("FREESHIP")}
-                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
-                        >
-                          FREESHIP (-30k)
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {/* Dynamic Suggestion Chips từ Database (Chỉ hiển thị Voucher đủ điều kiện đơn hàng) */}
+                  {(() => {
+                    const eligibleVouchers = activeVouchers.filter(
+                      (v) => subtotalPrice >= Number(v.minOrderValue || 0)
+                    );
+                    const lockedVouchers = activeVouchers
+                      .filter((v) => subtotalPrice < Number(v.minOrderValue || 0))
+                      .sort((a, b) => Number(a.minOrderValue) - Number(b.minOrderValue));
+                    const nearestLocked = lockedVouchers[0];
+
+                    return (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <Sparkles size={12} className="text-amber-500" /> Gợi ý voucher:
+                          </span>
+                          {eligibleVouchers.length > 0 ? (
+                            eligibleVouchers.map((v) => {
+                              const discountLabel =
+                                v.discountType === "PERCENT"
+                                  ? `-${v.discountValue}%`
+                                  : `-${Number(v.discountValue) >= 1000 ? `${Math.round(Number(v.discountValue) / 1000)}k` : `${v.discountValue}đ`}`;
+                              const minOrder = Number(v.minOrderValue) > 0 ? ` (Đơn từ ${Math.round(Number(v.minOrderValue) / 1000)}k)` : "";
+                              return (
+                                <button
+                                  key={v.id}
+                                  type="button"
+                                  onClick={() => applyVoucher(v.code)}
+                                  className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200 cursor-pointer transition-colors flex items-center gap-1 shadow-xs"
+                                  title={`Hết hạn: ${new Date(v.expiresAt).toLocaleDateString("vi-VN")}${minOrder}`}
+                                >
+                                  <span className="font-bold text-amber-800">{v.code}</span>
+                                  <span className="text-[10px] text-amber-600">({discountLabel})</span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground italic">
+                              Chưa có mã giảm giá đủ điều kiện cho đơn hàng này.
+                            </span>
+                          )}
+                        </div>
+
+                        {nearestLocked && (
+                          <div className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-md border border-amber-200 dark:border-amber-800/40 inline-flex items-center gap-1.5">
+                            <span>💡 Mua thêm <strong>{formatPrice(Number(nearestLocked.minOrderValue) - subtotalPrice)}</strong> để dùng mã <strong>{nearestLocked.code}</strong> ({nearestLocked.discountType === "PERCENT" ? `-${nearestLocked.discountValue}%` : `-${Math.round(Number(nearestLocked.discountValue) / 1000)}k`})</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

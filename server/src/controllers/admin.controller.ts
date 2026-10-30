@@ -385,7 +385,7 @@ export class AdminController {
         });
       }
 
-      // 2. Cập nhật và đồng bộ từng biến thể SKU (Màu sắc, Size, Tồn kho, SKU, Giá phụ thu)
+      // 2. Cập nhật và đồng bộ từng biến thể SKU (Màu sắc, Size, Tồn kho, SKU, Giá phụ thu, Ảnh biến thể)
       if (Array.isArray(variants)) {
         const incomingIds = variants.map((v: any) => v.id).filter(Boolean);
 
@@ -410,6 +410,10 @@ export class AdminController {
 
         // Cập nhật hoặc tạo mới biến thể
         for (const v of variants) {
+          const finalVarImg = (v.imageUrl && String(v.imageUrl).trim())
+            ? String(v.imageUrl).trim()
+            : (primaryImage || undefined);
+
           if (v.id) {
             await prisma.productVariant.update({
               where: { id: v.id },
@@ -419,7 +423,7 @@ export class AdminController {
                 ...(v.size && { size: String(v.size).trim() }),
                 ...(v.priceAdjustment !== undefined && { priceAdjustment: Number(v.priceAdjustment) }),
                 ...(v.stockQuantity !== undefined && { stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0) }),
-                ...(v.imageUrl !== undefined && { imageUrl: v.imageUrl }),
+                ...(finalVarImg !== undefined && { imageUrl: finalVarImg }),
               },
             });
           } else if (v.sku && v.color && v.size) {
@@ -432,7 +436,7 @@ export class AdminController {
                 size: String(v.size).trim(),
                 priceAdjustment: Number(v.priceAdjustment || 0),
                 stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0),
-                imageUrl: v.imageUrl || primaryImage || "",
+                imageUrl: finalVarImg || "",
               },
             });
           }

@@ -122,6 +122,8 @@ export function useAdminProducts() {
     onSuccess: (res) => {
       toast.success(res.message || "Cập nhật sản phẩm thành công!");
       queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["outfits"] });
       setEditingProduct(null);
     },
     onError: (err: unknown) => {

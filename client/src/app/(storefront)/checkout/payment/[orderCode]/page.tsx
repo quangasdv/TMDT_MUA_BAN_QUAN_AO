@@ -20,6 +20,8 @@ import {
   RefreshCw,
   RotateCcw,
   PackageOpen,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import "./style/payment.css";
 
@@ -479,12 +481,50 @@ export default function PaymentPage({ params }: PaymentPageProps) {
                 <span>Tạm tính</span>
                 <span className="font-bold text-foreground">{formatPrice(order.totalAmount)}</span>
               </div>
-              {Number(order.discountAmount) > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Mã giảm giá</span>
-                  <span>-{formatPrice(order.discountAmount)}</span>
-                </div>
-              )}
+              {/* Phân tách minh bạch Ưu đãi Combo và Mã giảm giá Voucher */}
+              {(() => {
+                const totalDiscount = Number(order.discountAmount) || 0;
+                let voucherDisc = Number((order as any).voucherDiscount);
+                let comboDisc = Number((order as any).comboDiscount);
+
+                if (isNaN(voucherDisc) || isNaN(comboDisc)) {
+                  if (order.voucher) {
+                    if (order.voucher.discountType === "PERCENT") {
+                      voucherDisc = Math.round(Number(order.totalAmount) * (Number(order.voucher.discountValue) / 100));
+                    } else {
+                      voucherDisc = Number(order.voucher.discountValue);
+                    }
+                    voucherDisc = Math.min(voucherDisc, totalDiscount);
+                    comboDisc = Math.max(0, totalDiscount - voucherDisc);
+                  } else {
+                    voucherDisc = 0;
+                    comboDisc = totalDiscount;
+                  }
+                }
+
+                return (
+                  <>
+                    {comboDisc > 0 && (
+                      <div className="flex justify-between text-emerald-600 font-semibold text-xs bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                        <span className="flex items-center gap-1">
+                          <Sparkles size={12} className="text-emerald-600" />
+                          Ưu đãi Combo thời trang
+                        </span>
+                        <span className="font-bold">-{formatPrice(comboDisc)}</span>
+                      </div>
+                    )}
+                    {voucherDisc > 0 && (
+                      <div className="flex justify-between text-emerald-600 font-semibold text-xs">
+                        <span className="flex items-center gap-1">
+                          <Tag size={12} />
+                          Mã giảm giá {order.voucher?.code && `(${order.voucher.code})`}
+                        </span>
+                        <span>-{formatPrice(voucherDisc)}</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <div className="pt-2 border-t border-border flex justify-between items-baseline">
                 <span className="font-bold text-foreground uppercase tracking-wider">
                   Cần thanh toán

@@ -216,7 +216,8 @@ export function useCart() {
     };
   }, [activeCombo, selectedItems]);
 
-  const selectedFinalTotal = Math.max(0, selectedSubtotalPrice - comboDiscountAmount + selectedShippingFee);
+  // Ở giỏ hàng chưa nhập địa chỉ nên không tự cộng phí ship vào tổng tạm tính
+  const selectedFinalTotal = Math.max(0, selectedSubtotalPrice - comboDiscountAmount);
 
   const selectedAmountNeededForFreeShipping = useMemo(() => {
     return Math.max(0, FREE_SHIPPING_THRESHOLD - selectedSubtotalPrice);
