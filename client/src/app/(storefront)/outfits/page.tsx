@@ -89,9 +89,12 @@ export default function CombosPage() {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 text-rose-600 mb-4">
           <AlertCircle size={32} />
         </div>
-        <h1 className="text-xl font-bold text-slate-900">Không thể tải Combo thời trang</h1>
+        <h1 className="text-xl font-bold text-slate-900">
+          Không thể tải Combo thời trang
+        </h1>
         <p className="text-sm text-slate-600 mt-2 mb-6">
-          {error || "Đã xảy ra lỗi khi tải danh sách các set phối đồ combo. Vui lòng thử lại."}
+          {error ||
+            "Đã xảy ra lỗi khi tải danh sách các set phối đồ combo. Vui lòng thử lại."}
         </p>
         <Button
           onClick={() => refetch()}
@@ -119,13 +122,17 @@ export default function CombosPage() {
                 Combo & Set Đồ Phối Sẵn
               </h1>
               <p className="text-sm sm:text-base text-slate-600 max-w-2xl font-medium">
-                1 Combo cứng giá rẻ hơn mua lẻ từng món, chỉ bao gồm quần áo. Giày dép, kính, mũ nón... là phụ kiện phối kèm tùy chọn và không tính vào giá gói combo.
+                1 Combo cứng giá rẻ hơn mua lẻ từng món, chỉ bao gồm quần áo.
+                Giày dép, kính, mũ nón... là phụ kiện phối kèm tùy chọn và không
+                tính vào giá gói combo.
               </p>
             </div>
 
             <div className="flex items-center gap-2 self-start md:self-auto text-xs font-bold text-slate-700 bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200">
               <Tag size={15} className="text-slate-900" />
-              <span>Đang mở bán: <strong>{combos.length}</strong> Combo độc quyền</span>
+              <span>
+                Đang mở bán: <strong>{combos.length}</strong> Combo độc quyền
+              </span>
             </div>
           </div>
 
@@ -138,8 +145,12 @@ export default function CombosPage() {
               {combos.map((combo: Combo) => {
                 const isSelected = combo.id === selectedComboId;
                 // Nếu là combo đang được chọn, ưu tiên lấy giá động theo biến thể người dùng đã chọn
-                const displayComboPrice = isSelected ? pricing.clothingComboPrice : combo.comboPrice;
-                const displayOriginalPrice = isSelected ? pricing.clothingOriginalPrice : combo.originalPrice;
+                const displayComboPrice = isSelected
+                  ? pricing.clothingComboPrice
+                  : combo.comboPrice;
+                const displayOriginalPrice = isSelected
+                  ? pricing.clothingOriginalPrice
+                  : combo.originalPrice;
 
                 return (
                   <button
@@ -204,7 +215,9 @@ export default function CombosPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <Layers size={48} className="mb-2" />
-                    <span className="text-xs font-semibold">Ảnh set phối đồ</span>
+                    <span className="text-xs font-semibold">
+                      Ảnh set phối đồ
+                    </span>
                   </div>
                 )}
 
@@ -224,7 +237,8 @@ export default function CombosPage() {
                         Ưu đãi gói quần áo
                       </p>
                       <p className="text-xs font-black text-slate-900">
-                        Tiết kiệm ngay {formatPrice(pricing.clothingSavedAmount)}
+                        Tiết kiệm ngay{" "}
+                        {formatPrice(pricing.clothingSavedAmount)}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
@@ -263,9 +277,13 @@ export default function CombosPage() {
                             : "bg-slate-50 text-slate-400 border-slate-200 line-through opacity-60"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${isChecked ? "bg-amber-600" : "bg-slate-300"}`} />
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${isChecked ? "bg-amber-600" : "bg-slate-300"}`}
+                        />
                         {item.productName || item.product?.name}
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isChecked ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-500"}`}>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isChecked ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-500"}`}
+                        >
                           Phụ kiện {isChecked ? "✓ Đã chọn" : "+ Chưa chọn"}
                         </span>
                       </span>
@@ -282,7 +300,10 @@ export default function CombosPage() {
                 <span>Cam kết chính hãng & phối chuẩn form</span>
               </div>
               <div className="p-3 rounded-2xl bg-white border border-slate-200 flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-primary-foreground shrink-0" />
+                <CheckCircle2
+                  size={16}
+                  className="text-primary-foreground shrink-0"
+                />
                 <span>Hỗ trợ đổi size từng món trong 7 ngày</span>
               </div>
             </div>
@@ -317,7 +338,8 @@ export default function CombosPage() {
                     1. Quần áo trong Combo (Giá gói cố định)
                   </h3>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    Tùy chọn kích cỡ và màu sắc phù hợp với bạn trước khi thêm vào giỏ.
+                    Tùy chọn kích cỡ và màu sắc phù hợp với bạn trước khi thêm
+                    vào giỏ.
                   </p>
                 </div>
                 <Badge className="bg-slate-900 text-white font-bold text-xs">
@@ -328,16 +350,21 @@ export default function CombosPage() {
               <div className="space-y-4">
                 {clothingItems.map((item: ComboItem) => {
                   const SlotIcon = SLOT_ICONS[item.slotType] || Shirt;
-                  const slotMeta = outfitSlotNames[item.slotType] || { label: "Quần áo" };
-                  const currentVariant = selectedVariants[item.id] || item.defaultVariant;
+                  const slotMeta = outfitSlotNames[item.slotType] || {
+                    label: "Quần áo",
+                  };
+                  const currentVariant =
+                    selectedVariants[item.id] || item.defaultVariant;
                   const allVariants = item.product?.allVariants || [];
-                  const basePrice = Number(item.product?.basePrice ?? item.price ?? 0);
+                  const basePrice = Number(
+                    item.product?.basePrice ?? item.price ?? 0,
+                  );
                   const priceAdj = Number(currentVariant?.priceAdjustment || 0);
                   const itemUnitPrice = basePrice + priceAdj;
 
                   // Unique available sizes
                   const uniqueSizes = Array.from(
-                    new Set(allVariants.map((v) => v.size).filter(Boolean))
+                    new Set(allVariants.map((v) => v.size).filter(Boolean)),
                   );
 
                   return (
@@ -350,7 +377,7 @@ export default function CombosPage() {
                           {currentVariant?.imageUrl || item.imageUrl ? (
                             <Image
                               src={currentVariant?.imageUrl || item.imageUrl}
-                              alt={item.productName}
+                              alt={item.productName ?? "abc"}
                               fill
                               className="object-cover"
                               sizes="64px"
@@ -388,18 +415,26 @@ export default function CombosPage() {
                       {/* Variant Size Picker */}
                       {uniqueSizes.length > 0 && (
                         <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-700">Chọn kích cỡ (Size):</span>
+                          <span className="text-xs font-bold text-slate-700">
+                            Chọn kích cỡ (Size):
+                          </span>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {uniqueSizes.map((size) => {
-                              const isSizeActive = currentVariant?.size === size;
-                              const matchingVariant = allVariants.find((v) => v.size === size);
+                              const isSizeActive =
+                                currentVariant?.size === size;
+                              const matchingVariant = allVariants.find(
+                                (v) => v.size === size,
+                              );
                               return (
                                 <button
                                   key={size}
                                   type="button"
                                   onClick={() => {
                                     if (matchingVariant) {
-                                      handleSelectVariant(item.id, matchingVariant);
+                                      handleSelectVariant(
+                                        item.id,
+                                        matchingVariant,
+                                      );
                                     }
                                   }}
                                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -424,7 +459,10 @@ export default function CombosPage() {
               <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-slate-600">
-                    Giá mua lẻ từng món: <span className="line-through">{formatPrice(pricing.clothingOriginalPrice)}</span>
+                    Giá mua lẻ từng món:{" "}
+                    <span className="line-through">
+                      {formatPrice(pricing.clothingOriginalPrice)}
+                    </span>
                   </p>
                   <p className="text-xs font-bold text-slate-800 mt-0.5">
                     Giá trọn gói Combo Quần Áo:{" "}
@@ -451,10 +489,14 @@ export default function CombosPage() {
                       2. Phụ kiện phối kèm (Không tính vào Combo)
                     </h3>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Giày dép, nón, kính là phụ kiện độc lập, bán lẻ theo giá niêm yết riêng nếu bạn muốn mua trọn bộ.
+                      Giày dép, nón, kính là phụ kiện độc lập, bán lẻ theo giá
+                      niêm yết riêng nếu bạn muốn mua trọn bộ.
                     </p>
                   </div>
-                  <Badge variant="outline" className="text-amber-800 border-amber-300 bg-amber-50 font-bold text-xs">
+                  <Badge
+                    variant="outline"
+                    className="text-amber-800 border-amber-300 bg-amber-50 font-bold text-xs"
+                  >
                     Tùy chọn thêm
                   </Badge>
                 </div>
@@ -462,14 +504,19 @@ export default function CombosPage() {
                 <div className="space-y-3">
                   {accessoryItems.map((item: ComboItem) => {
                     const isChecked = Boolean(selectedAccessories[item.id]);
-                    const currentVariant = selectedVariants[item.id] || item.defaultVariant;
+                    const currentVariant =
+                      selectedVariants[item.id] || item.defaultVariant;
                     const allVariants = item.product?.allVariants || [];
-                    const basePrice = Number(item.product?.basePrice ?? item.price ?? 0);
-                    const priceAdj = Number(currentVariant?.priceAdjustment || 0);
+                    const basePrice = Number(
+                      item.product?.basePrice ?? item.price ?? 0,
+                    );
+                    const priceAdj = Number(
+                      currentVariant?.priceAdjustment || 0,
+                    );
                     const itemUnitPrice = basePrice + priceAdj;
 
                     const uniqueSizes = Array.from(
-                      new Set(allVariants.map((v) => v.size).filter(Boolean))
+                      new Set(allVariants.map((v) => v.size).filter(Boolean)),
                     );
 
                     return (
@@ -499,13 +546,17 @@ export default function CombosPage() {
                                   : "bg-white border-slate-300 hover:border-slate-400"
                               }`}
                             >
-                              {isChecked && <Check size={13} strokeWidth={3.5} />}
+                              {isChecked && (
+                                <Check size={13} strokeWidth={3.5} />
+                              )}
                             </button>
 
                             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                               {currentVariant?.imageUrl || item.imageUrl ? (
                                 <Image
-                                  src={currentVariant?.imageUrl || item.imageUrl}
+                                  src={
+                                    currentVariant?.imageUrl || item.imageUrl
+                                  }
                                   alt={item.productName}
                                   fill
                                   className="object-cover"
@@ -530,7 +581,9 @@ export default function CombosPage() {
                                       : "bg-slate-100 text-slate-600 border-slate-200"
                                   }`}
                                 >
-                                  {isChecked ? "✓ Đã chọn mua kèm" : "+ Tùy chọn mua kèm"}
+                                  {isChecked
+                                    ? "✓ Đã chọn mua kèm"
+                                    : "+ Tùy chọn mua kèm"}
                                 </span>
                               </div>
                               <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -540,7 +593,9 @@ export default function CombosPage() {
                           </div>
 
                           <div className="text-right shrink-0">
-                            <span className={`font-black text-sm transition-colors ${isChecked ? "text-slate-900" : "text-slate-400"}`}>
+                            <span
+                              className={`font-black text-sm transition-colors ${isChecked ? "text-slate-900" : "text-slate-400"}`}
+                            >
                               +{formatPrice(itemUnitPrice)}
                             </span>
                           </div>
@@ -557,8 +612,11 @@ export default function CombosPage() {
                             </span>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {uniqueSizes.map((size) => {
-                                const isSizeActive = currentVariant?.size === size;
-                                const matchingVariant = allVariants.find((v) => v.size === size);
+                                const isSizeActive =
+                                  currentVariant?.size === size;
+                                const matchingVariant = allVariants.find(
+                                  (v) => v.size === size,
+                                );
                                 return (
                                   <button
                                     key={size}
@@ -566,7 +624,10 @@ export default function CombosPage() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (matchingVariant) {
-                                        handleSelectVariant(item.id, matchingVariant);
+                                        handleSelectVariant(
+                                          item.id,
+                                          matchingVariant,
+                                        );
                                       }
                                     }}
                                     className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -597,7 +658,9 @@ export default function CombosPage() {
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between text-slate-600">
-                  <span>Combo Quần Áo ({clothingItems.length} món ưu đãi):</span>
+                  <span>
+                    Combo Quần Áo ({clothingItems.length} món ưu đãi):
+                  </span>
                   <span className="font-bold text-slate-900">
                     {formatPrice(pricing.clothingComboPrice)}
                   </span>
@@ -605,7 +668,8 @@ export default function CombosPage() {
                 {pricing.selectedAccessoriesCount > 0 ? (
                   <div className="flex justify-between text-slate-600">
                     <span>
-                      Phụ kiện phối kèm ({pricing.selectedAccessoriesCount} món tính giá lẻ):
+                      Phụ kiện phối kèm ({pricing.selectedAccessoriesCount} món
+                      tính giá lẻ):
                     </span>
                     <span className="font-bold text-slate-900">
                       +{formatPrice(pricing.selectedAccessoriesPrice)}
@@ -625,13 +689,16 @@ export default function CombosPage() {
 
               <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Tổng thanh toán dự kiến:</p>
+                  <p className="text-xs font-medium text-slate-500">
+                    Tổng thanh toán dự kiến:
+                  </p>
                   <p className="text-2xl font-black text-slate-950">
                     {formatPrice(pricing.finalTotal)}
                   </p>
                 </div>
                 <div className="text-right text-xs text-slate-400 line-through">
-                  Giá nếu mua lẻ: {formatPrice(pricing.regularTotalWithoutCombo)}
+                  Giá nếu mua lẻ:{" "}
+                  {formatPrice(pricing.regularTotalWithoutCombo)}
                 </div>
               </div>
 
@@ -646,7 +713,9 @@ export default function CombosPage() {
                 ) : (
                   <ShoppingBag size={20} />
                 )}
-                {isAddingToCart ? "Đang thêm vào giỏ hàng..." : "Thêm trọn bộ Combo vào giỏ hàng"}
+                {isAddingToCart
+                  ? "Đang thêm vào giỏ hàng..."
+                  : "Thêm trọn bộ Combo vào giỏ hàng"}
               </Button>
 
               <div className="text-center">
