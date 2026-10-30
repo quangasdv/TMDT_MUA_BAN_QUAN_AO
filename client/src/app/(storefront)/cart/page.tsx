@@ -49,6 +49,11 @@ export default function CartPage() {
     selectedShippingFee,
     selectedFinalTotal,
     selectedIsFreeShipping,
+    activeCombo,
+    comboDiscountAmount,
+    eligibleComboCount,
+    isComboApplied,
+    hasPartialCombo,
     selectedAmountNeededForFreeShipping,
     selectedFreeShippingProgress,
     hasSelectedOutOfStockItems,
@@ -569,6 +574,23 @@ export default function CartPage() {
                   )}
                 </span>
               </div>
+
+                {/* Ưu đãi Combo Thời Trang */}
+                {isComboApplied && comboDiscountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-semibold items-center bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-emerald-600 shrink-0" />
+                      <span>Ưu đãi Combo {activeCombo?.title ? `(${activeCombo.title})` : ""} {eligibleComboCount > 1 ? `x${eligibleComboCount}` : ""}</span>
+                    </div>
+                    <span className="font-bold shrink-0">-{formatPrice(comboDiscountAmount)}</span>
+                  </div>
+                )}
+
+                {hasPartialCombo && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                    💡 Bạn đang chọn thiếu món trong Combo. Vui lòng chọn đủ bộ để được áp dụng giảm giá {activeCombo?.title || "Combo"}!
+                  </p>
+                )}
             </div>
 
             <div className="pt-4 border-t border-border flex justify-between items-baseline">

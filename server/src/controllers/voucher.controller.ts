@@ -2,6 +2,48 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../config/db";
 
 export class VoucherController {
+  /**
+   * Lấy danh sách Voucher khả dụng cho khách hàng (Storefront Checkout)
+   * GET /api/vouchers/active
+   */
+  static async getActiveVouchers(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const now = new Date();
+      const vouchers = await prisma.voucher.findMany({
+        where: {
+          isActive: true,
+          expiresAt: { gt: now },
+        },
+        select: {
+          id: true,
+          code: true,
+          discountType: true,
+          discountValue: true,
+          minOrderValue: true,
+          expiresAt: true,
+          usedCount: true,
+          usageLimit: true,
+        },
+        orderBy: { discountValue: "desc" },
+        take: 12,
+      });
+
+      // Lọc các voucher còn lượt sử dụng
+      const availableVouchers = vouchers.filter((v) => v.usedCount < v.usageLimit);
+
+      res.status(200).json({
+        success: true,
+        data: { vouchers: availableVouchers },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Kiểm tra và áp dụng mã giảm giá
+   * POST /api/vouchers/apply
+   */
   static async applyVoucher(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { voucherCode, totalAmount } = req.body;
@@ -51,7 +93,7 @@ export class VoucherController {
         res.status(400).json({
           success: false,
           errorCode: "VOUCHER_MIN_ORDER_VALUE",
-          message: `Đơn hàng tối thiểu phải từ ${voucher.minOrderValue.toLocaleString()}đ để áp dụng mã này.`,
+          message: `Đơn hàng tối thiểu phải từ ${Number(voucher.minOrderValue).toLocaleString()}đ để áp dụng mã này.`,
         });
         return;
       }

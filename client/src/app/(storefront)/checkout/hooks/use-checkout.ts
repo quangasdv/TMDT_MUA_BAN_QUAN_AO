@@ -19,7 +19,7 @@ import {
 import { lockAndCheckoutApi, applyVoucherApi } from "../api/checkout.api";
 import { getApiErrorCode, getApiErrorMessage } from "@/lib/error";
 
-export function useCheckout(options?: { selectedProvinceId?: string }) {
+export function useCheckout(options?: { selectedProvinceId?: string; paymentMethod?: "VIETQR" | "COD" }) {
   const selectedProvinceId = options?.selectedProvinceId;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -64,6 +64,24 @@ export function useCheckout(options?: { selectedProvinceId?: string }) {
   // State lỗi nghiệp vụ đặc thù
   const [pendingLimitError, setPendingLimitError] = useState<string | null>(null);
   const [stockError, setStockError] = useState<string | null>(null);
+  // Thông tin Combo từ localStorage (nếu có)
+  const [activeCombo] = useState<{
+    outfitId: string;
+    title: string;
+    discountRate: number;
+    clothingVariantIds: string[];
+    clothingOriginalPrice?: number;
+  } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("trendyfit_active_combo");
+        if (stored) return JSON.parse(stored);
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  });
 
   // Form khởi tạo với Zod
   const form = useForm<CheckoutFormValues>({
@@ -97,7 +115,39 @@ export function useCheckout(options?: { selectedProvinceId?: string }) {
   const isFreeShipping = shippingRate.fee === 0;
   const shippingFee = items.length === 0 ? 0 : shippingRate.fee;
   const discountAmount = appliedVoucher?.discountAmount || 0;
-  const finalTotal = Math.max(0, subtotalPrice - discountAmount + shippingFee);
+
+  // Tính ưu đãi Combo thời trang (Dynamic Bundle Matching)
+  const { eligibleComboCount, comboDiscountAmount, isComboApplied } = useMemo(() => {
+    if (!activeCombo || !activeCombo.clothingVariantIds || activeCombo.clothingVariantIds.length === 0) {
+      return { eligibleComboCount: 0, comboDiscountAmount: 0, isComboApplied: false };
+    }
+
+    const quantities = activeCombo.clothingVariantIds.map((vId) => {
+      const it = items.find((item) => item.variantId === vId);
+      return it ? (it.quantity || 0) : 0;
+    });
+
+    const minQty = Math.min(...quantities);
+
+    if (minQty > 0) {
+      let singleSetPrice = 0;
+      for (const vId of activeCombo.clothingVariantIds) {
+        const it = items.find((item) => item.variantId === vId);
+        if (it) {
+          const base = Number(it.variant?.product?.basePrice) || 0;
+          const adjust = Number(it.variant?.priceAdjustment) || 0;
+          singleSetPrice += base + adjust;
+        }
+      }
+      const rate = Number(activeCombo.discountRate) || 0.15;
+      const discount = Math.round(minQty * singleSetPrice * rate);
+      return { eligibleComboCount: minQty, comboDiscountAmount: discount, isComboApplied: true };
+    }
+
+    return { eligibleComboCount: 0, comboDiscountAmount: 0, isComboApplied: false };
+  }, [activeCombo, items]);
+
+  const finalTotal = Math.max(0, subtotalPrice - discountAmount - comboDiscountAmount + shippingFee);
 
   // Thao tác áp dụng mã giảm giá
   const handleApplyVoucher = async (codeToApply?: string) => {
@@ -158,12 +208,23 @@ export function useCheckout(options?: { selectedProvinceId?: string }) {
       }
       queryClient.invalidateQueries({ queryKey: ["cart"] });
 
-      // 2. Thông báo thành công và chuyển ngay đến trang thanh toán
-      toast.success(
-        data.message || "Tạo đơn hàng thành công! Đang chuyển đến màn hình thanh toán..."
-      );
+      // 2. Chuyển hướng thông minh theo phương thức thanh toán
       const orderCode = data.data.order.orderCode;
-      router.push(`/checkout/payment/${orderCode}`);
+      const isCod = (options?.paymentMethod === "COD") || Boolean((data.data as any)?.isCod);
+      if (isCod) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.removeItem("trendyfit_active_combo");
+          } catch {}
+        }
+        toast.success("Đặt hàng COD thành công! Đơn hàng đang được đóng gói chuẩn bị giao.");
+        router.push(`/orders/${orderCode}?codSuccess=true`);
+      } else {
+        toast.success(
+          data.message || "Tạo đơn hàng thành công! Đang chuyển đến màn hình thanh toán..."
+        );
+        router.push(`/checkout/payment/${orderCode}`);
+      }
     },
     onError: (err: unknown) => {
       const code = getApiErrorCode(err);
@@ -197,11 +258,14 @@ export function useCheckout(options?: { selectedProvinceId?: string }) {
       return;
     }
 
+    const currentPaymentMethod = options?.paymentMethod || "VIETQR";
     const payload = {
       recipientName: values.recipientName.trim(),
       recipientPhone: values.recipientPhone.trim(),
       shippingAddress: values.shippingAddress.trim(),
       voucherCode: appliedVoucher?.code || undefined,
+      outfitId: eligibleComboCount > 0 && activeCombo ? activeCombo.outfitId : undefined,
+      paymentMethod: currentPaymentMethod === "COD" ? ("COD" as const) : ("QR" as const),
       items: items.map((it: CartItem) => ({
         variantId: it.variantId,
         quantity: it.quantity,
@@ -223,6 +287,10 @@ export function useCheckout(options?: { selectedProvinceId?: string }) {
     shippingFee,
     shippingRate,
     discountAmount,
+    comboDiscountAmount,
+    eligibleComboCount,
+    isComboApplied,
+    activeCombo,
     finalTotal,
     appliedVoucher,
     isApplyingVoucher,

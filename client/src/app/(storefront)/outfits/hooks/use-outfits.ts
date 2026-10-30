@@ -207,6 +207,31 @@ export function useOutfits() {
     setIsAddingToCart(false);
 
     if (successCount > 0) {
+      if (typeof window !== "undefined") {
+        try {
+          const clothingVariantIds = clothingItems.map((item) => {
+            const v =
+              selectedVariants[item.id] ||
+              item.defaultVariant ||
+              item.product?.allVariants?.[0];
+            return v?.id || item.variantId;
+          }).filter(Boolean);
+
+          localStorage.setItem(
+            "trendyfit_active_combo",
+            JSON.stringify({
+              outfitId: activeCombo.id,
+              title: activeCombo.title,
+              discountRate: activeCombo.discountRate || 0.15,
+              clothingVariantIds,
+              clothingOriginalPrice: pricing.clothingOriginalPrice,
+            })
+          );
+        } catch {
+          // ignore
+        }
+      }
+
       toast.success(
         `Đã thêm trọn bộ "${activeCombo.title}" (${successCount} món) vào giỏ hàng! Tiết kiệm ${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(pricing.clothingSavedAmount)}`
       );

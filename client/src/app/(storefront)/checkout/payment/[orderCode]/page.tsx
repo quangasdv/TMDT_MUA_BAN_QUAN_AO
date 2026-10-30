@@ -158,6 +158,77 @@ export default function PaymentPage({ params }: PaymentPageProps) {
       </div>
     );
   }
+  const isCod = Boolean(
+    (order?.payment?.provider === "COD" || (order as any)?.paymentTransactions?.some((t: any) => t.provider === "COD")) ||
+    (order?.status === "PROCESSING" && order?.paymentStatus === "UNPAID")
+  );
+
+  // 3.1. Trạng thái ĐẶT HÀNG COD THÀNH CÔNG (Không hiện QR VietQR)
+  if (isCod) {
+    return (
+      <div className="payment-page-container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12">
+        <div className="payment-success-card p-8 sm:p-10 rounded-3xl border border-emerald-500/30 bg-card shadow-xl text-center space-y-6">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 size={44} className="stroke-[2.5]" />
+          </div>
+
+          <div className="space-y-2">
+            <Badge variant="default" className="bg-emerald-600 text-white font-bold text-xs px-3 py-1">
+              Đặt hàng COD thành công
+            </Badge>
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+              Xác nhận đơn hàng thành công!
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Đơn hàng <strong className="text-foreground">#{order.orderCode}</strong> đã được hệ thống ghi nhận. Quý khách vui lòng chuẩn bị số tiền mặt khi shipper giao hàng tới.
+            </p>
+          </div>
+
+          {/* Chi tiết xác nhận */}
+          <div className="max-w-md mx-auto p-5 rounded-2xl bg-muted/40 border border-border text-left space-y-3 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Mã đơn hàng:</span>
+              <span className="font-bold text-foreground">#{order.orderCode}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tổng tiền cần thanh toán:</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                {formatPrice(order.finalAmount)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Người nhận:</span>
+              <span className="font-semibold text-foreground">{order.recipientName} ({order.recipientPhone})</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Địa chỉ nhận hàng:</span>
+              <span className="font-semibold text-foreground text-right max-w-[200px] truncate">
+                {order.shippingAddress}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phương thức:</span>
+              <span className="font-semibold text-foreground">Thanh toán khi nhận hàng (COD)</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <Link href={`/orders/${order.orderCode}`} className={cn(buttonVariants({ size: "lg" }), "gap-2 rounded-xl")}>
+              <ShoppingBag size={16} />
+              Xem chi tiết đơn hàng
+            </Link>
+            <Link
+              href="/products"
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-xl")}
+            >
+              Tiếp tục mua sắm
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   // 4. Trạng thái CHỜ THANH TOÁN (PENDING_PAYMENT)
   const transferMemo = `TRENDYFIT ${order.orderCode}`;

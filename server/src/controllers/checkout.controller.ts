@@ -15,6 +15,7 @@ const checkoutSchema = z.object({
     ),
   shippingAddress: z.string().min(5, "Địa chỉ giao hàng tối thiểu 5 ký tự"),
   voucherCode: z.string().optional(),
+  outfitId: z.string().optional(),
   paymentMethod: z.enum(["QR", "COD", "BANK_TRANSFER_MOCK"]).default("QR"),
   items: z
     .array(
@@ -49,7 +50,7 @@ export class CheckoutController {
 
       // Xác thực dữ liệu đầu vào bằng Zod
       const validatedData = checkoutSchema.parse(req.body);
-      const { recipientName, recipientPhone, shippingAddress, voucherCode, paymentMethod, items } = validatedData;
+      const { recipientName, recipientPhone, shippingAddress, voucherCode, outfitId, paymentMethod, items } = validatedData;
       const isCod = paymentMethod === "COD";
 
       // Nếu là thanh toán online: Kiểm tra giới hạn tối đa 2 đơn PENDING_PAYMENT để chống spam giữ kho
@@ -139,6 +140,46 @@ export class CheckoutController {
       //   + Nội thành TP.HCM (Kho shop): 20.000 đ
       //   + Miền Nam lân cận (Bình Dương, Đồng Nai, Cần Thơ...): 25.000 đ
       //   + Miền Trung & Miền Bắc: 35.000 đ
+
+      // Tinh uu dai Combo thoi trang neu co outfitId hop le (Dynamic Bundle Matching)
+      let comboDiscount = 0;
+      if (outfitId) {
+        const outfit = await prisma.outfit.findUnique({
+          where: { id: outfitId, isActive: true },
+          include: { items: true },
+        });
+
+        if (outfit && outfit.items.length > 0) {
+          const requiredClothingItems = outfit.items.filter((it) =>
+            ["TOP", "BOTTOM", "OUTERWEAR"].includes(it.slotType)
+          );
+
+          if (requiredClothingItems.length > 0) {
+            const quantities = requiredClothingItems.map((reqItem) => {
+              const orderedItem = items.find((it) => it.variantId === reqItem.variantId);
+              return orderedItem ? orderedItem.quantity : 0;
+            });
+
+            const eligibleComboCount = Math.min(...quantities);
+
+            if (eligibleComboCount > 0) {
+              let singleSetPrice = 0;
+              for (const reqItem of requiredClothingItems) {
+                const v = variants.find((vr) => vr.id === reqItem.variantId);
+                if (v) {
+                  singleSetPrice += Number(v.product.basePrice) + Number(v.priceAdjustment);
+                }
+              }
+
+              const discountRate = Number(outfit.discountRate) || 0.15;
+              comboDiscount = Math.round(eligibleComboCount * singleSetPrice * discountRate);
+              discountAmount += comboDiscount;
+              discountAmount = Math.min(discountAmount, totalAmount);
+            }
+          }
+        }
+      }
+
       let shippingFee = 0;
       if (totalAmount < 499000) {
         const addr = shippingAddress.toLowerCase();

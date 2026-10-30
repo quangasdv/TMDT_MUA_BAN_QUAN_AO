@@ -135,12 +135,12 @@ export const ORDER_STATUS_LABELS: Record<string, { label: string; colorClass: st
     bgClass: "bg-amber-50 border-amber-300",
   },
   PAID: {
-    label: "Chờ xử lý",
+    label: "Đã thanh toán",
     colorClass: "text-emerald-900",
     bgClass: "bg-emerald-50 border-emerald-300",
   },
   PROCESSING: {
-    label: "Đang xử lý",
+    label: "Đang đóng gói",
     colorClass: "text-sky-900",
     bgClass: "bg-sky-50 border-sky-300",
   },
@@ -168,7 +168,7 @@ export const ORDER_STATUS_LABELS: Record<string, { label: string; colorClass: st
 
 export const PAYMENT_STATUS_LABELS: Record<string, { label: string; colorClass: string; bgClass: string }> = {
   UNPAID: {
-    label: "Chưa thanh toán",
+    label: "Đã thanh toán",
     colorClass: "text-slate-800",
     bgClass: "bg-slate-100 border-slate-300",
   },

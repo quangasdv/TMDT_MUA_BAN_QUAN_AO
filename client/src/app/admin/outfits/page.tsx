@@ -660,63 +660,128 @@ export default function AdminOutfitsPage() {
                   ) : (
                     <div className="space-y-2.5">
                       {createForm.items.map((item, idx) => {
+                        const foundProduct = products.find((p) => p.variants.some((v) => v.id === item.variantId));
+                        const foundVariant = foundProduct?.variants.find((v) => v.id === item.variantId);
+                        const unitPrice = foundProduct && foundVariant
+                          ? Number(foundProduct.basePrice) + Number(foundVariant.priceAdjustment || 0)
+                          : 0;
+
+                        const slotMeta = OUTFIT_SLOT_LABELS[item.slotType] || {
+                          label: item.slotType,
+                          badgeClass: "bg-slate-100 text-slate-800 border-slate-300",
+                        };
+                        const SlotIcon = SLOT_ICONS[item.slotType] || Shirt;
+
                         return (
                           <div
                             key={idx}
-                            className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
+                            className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 shadow-2xs transition-all space-y-2.5"
                           >
-                            <span className="text-xs font-black text-slate-400 w-5 shrink-0">
-                              #{idx + 1}
-                            </span>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-black">
+                                  #{idx + 1}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${slotMeta.badgeClass}`}>
+                                    <SlotIcon size={11} />
+                                    <span>{slotMeta.label}</span>
+                                  </span>
+                                  <select
+                                    value={item.slotType}
+                                    onChange={(e) => {
+                                      const newItems = [...createForm.items];
+                                      newItems[idx].slotType = e.target.value;
+                                      setCreateForm((prev) => ({ ...prev, items: newItems }));
+                                    }}
+                                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                                  >
+                                    <option value="TOP">Đổi vị trí: Áo (TOP)</option>
+                                    <option value="BOTTOM">Đổi vị trí: Quần (BOTTOM)</option>
+                                    <option value="OUTERWEAR">Đổi vị trí: Áo khoác (OUTERWEAR)</option>
+                                  </select>
+                                </div>
+                              </div>
 
-                            {/* Slot Type: Chỉ bao gồm Quần Áo trong combo */}
-                            <select
-                              value={item.slotType}
-                              onChange={(e) => {
-                                const newItems = [...createForm.items];
-                                newItems[idx].slotType = e.target.value;
-                                setCreateForm((prev) => ({ ...prev, items: newItems }));
-                              }}
-                              className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 shrink-0 focus:outline-none"
-                            >
-                              <option value="TOP">Áo (TOP)</option>
-                              <option value="BOTTOM">Quần (BOTTOM)</option>
-                              <option value="OUTERWEAR">Áo khoác (OUTERWEAR)</option>
-                            </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newItems = createForm.items.filter((_, i) => i !== idx);
+                                  setCreateForm((prev) => ({ ...prev, items: newItems }));
+                                }}
+                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Xóa món này khỏi Combo"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
 
-                            {/* Variant selector */}
-                            <select
-                              value={item.variantId}
-                              onChange={(e) => {
-                                const newItems = [...createForm.items];
-                                newItems[idx].variantId = e.target.value;
-                                setCreateForm((prev) => ({ ...prev, items: newItems }));
-                              }}
-                              className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none"
-                            >
-                              <option value="">-- Chọn biến thể sản phẩm --</option>
-                              {products.map((p) => (
-                                <optgroup key={p.id} label={`${p.name} (${formatPrice(p.basePrice)})`}>
-                                  {p.variants.map((v) => (
-                                    <option key={v.id} value={v.id}>
-                                      {p.name} - [{v.color} / Size {v.size}] - SKU: {v.sku} (Kho: {v.stockQuantity})
-                                    </option>
+                            <div className="flex items-start gap-3">
+                              {/* Thumbnail Preview */}
+                              <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                                {foundVariant?.imageUrl ? (
+                                  <Image
+                                    src={foundVariant.imageUrl}
+                                    alt={foundProduct?.name || "Product"}
+                                    fill
+                                    className="object-cover"
+                                    sizes="56px"
+                                  />
+                                ) : (
+                                  <SlotIcon size={24} className="text-slate-400" />
+                                )}
+                              </div>
+
+                              {/* Variant selector dropdown */}
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <select
+                                  value={item.variantId}
+                                  onChange={(e) => {
+                                    const newItems = [...createForm.items];
+                                    newItems[idx].variantId = e.target.value;
+                                    setCreateForm((prev) => ({ ...prev, items: newItems }));
+                                  }}
+                                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none"
+                                >
+                                  <option value="">-- Chọn sản phẩm & biến thể SKU --</option>
+                                  {products.map((p) => (
+                                    <optgroup key={p.id} label={`${p.name} (${formatPrice(p.basePrice)})`}>
+                                      {p.variants.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                          {p.name} • [{v.color} / Size {v.size}] • SKU: {v.sku} (Kho: {v.stockQuantity})
+                                        </option>
+                                      ))}
+                                    </optgroup>
                                   ))}
-                                </optgroup>
-                              ))}
-                            </select>
+                                </select>
 
-                            {/* Nút xóa món */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newItems = createForm.items.filter((_, i) => i !== idx);
-                                setCreateForm((prev) => ({ ...prev, items: newItems }));
-                              }}
-                              className="text-slate-400 hover:text-rose-600 p-1 self-end sm:self-auto"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                                {/* Chips thông tin chi tiết */}
+                                {foundVariant && foundProduct && (
+                                  <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] pt-0.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                        Màu: <strong>{foundVariant.color}</strong>
+                                      </span>
+                                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                        Size: <strong>{foundVariant.size}</strong>
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-md font-bold ${
+                                        foundVariant.stockQuantity > 5
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          : foundVariant.stockQuantity > 0
+                                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                          : "bg-rose-50 text-rose-700 border border-rose-200"
+                                      }`}>
+                                        Tồn kho: {foundVariant.stockQuantity}
+                                      </span>
+                                    </div>
+                                    <div className="font-black text-slate-900 text-xs ml-auto">
+                                      {formatPrice(unitPrice)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         );
                       })}
@@ -970,65 +1035,132 @@ export default function AdminOutfitsPage() {
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {editForm.items.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5"
-                        >
-                          <span className="text-xs font-black text-slate-400 w-5 shrink-0">
-                            #{idx + 1}
-                          </span>
+                      {editForm.items.map((item, idx) => {
+                        const foundProduct = products.find((p) => p.variants.some((v) => v.id === item.variantId));
+                        const foundVariant = foundProduct?.variants.find((v) => v.id === item.variantId);
+                        const unitPrice = foundProduct && foundVariant
+                          ? Number(foundProduct.basePrice) + Number(foundVariant.priceAdjustment || 0)
+                          : 0;
 
-                          {/* Slot Type */}
-                          <select
-                            value={item.slotType}
-                            onChange={(e) => {
-                              const newItems = [...(editForm.items || [])];
-                              newItems[idx].slotType = e.target.value;
-                              setEditForm((prev) => ({ ...prev, items: newItems }));
-                            }}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 shrink-0 focus:outline-none"
-                          >
-                            <option value="TOP">Áo (TOP)</option>
-                            <option value="BOTTOM">Quần (BOTTOM)</option>
-                            <option value="OUTERWEAR">Áo khoác (OUTERWEAR)</option>
-                          </select>
+                        const slotMeta = OUTFIT_SLOT_LABELS[item.slotType] || {
+                          label: item.slotType,
+                          badgeClass: "bg-slate-100 text-slate-800 border-slate-300",
+                        };
+                        const SlotIcon = SLOT_ICONS[item.slotType] || Shirt;
 
-                          {/* Variant selector */}
-                          <select
-                            value={item.variantId}
-                            onChange={(e) => {
-                              const newItems = [...(editForm.items || [])];
-                              newItems[idx].variantId = e.target.value;
-                              setEditForm((prev) => ({ ...prev, items: newItems }));
-                            }}
-                            className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none"
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 shadow-2xs transition-all space-y-2.5"
                           >
-                            <option value="">-- Chọn biến thể sản phẩm --</option>
-                            {products.map((p) => (
-                              <optgroup key={p.id} label={`${p.name} (${formatPrice(p.basePrice)})`}>
-                                {p.variants.map((v) => (
-                                  <option key={v.id} value={v.id}>
-                                    {p.name} - [{v.color} / Size {v.size}] - SKU: {v.sku} (Kho: {v.stockQuantity})
-                                  </option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </select>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-xs font-black">
+                                  #{idx + 1}
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${slotMeta.badgeClass}`}>
+                                    <SlotIcon size={11} />
+                                    <span>{slotMeta.label}</span>
+                                  </span>
+                                  <select
+                                    value={item.slotType}
+                                    onChange={(e) => {
+                                      const newItems = [...(editForm.items || [])];
+                                      newItems[idx].slotType = e.target.value;
+                                      setEditForm((prev) => ({ ...prev, items: newItems }));
+                                    }}
+                                    className="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                                  >
+                                    <option value="TOP">Đổi vị trí: Áo (TOP)</option>
+                                    <option value="BOTTOM">Đổi vị trí: Quần (BOTTOM)</option>
+                                    <option value="OUTERWEAR">Đổi vị trí: Áo khoác (OUTERWEAR)</option>
+                                  </select>
+                                </div>
+                              </div>
 
-                          {/* Nút xóa món */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newItems = (editForm.items || []).filter((_, i) => i !== idx);
-                              setEditForm((prev) => ({ ...prev, items: newItems }));
-                            }}
-                            className="text-slate-400 hover:text-rose-600 p-1 self-end sm:self-auto cursor-pointer"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newItems = (editForm.items || []).filter((_, i) => i !== idx);
+                                  setEditForm((prev) => ({ ...prev, items: newItems }));
+                                }}
+                                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Xóa món này khỏi Combo"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              {/* Thumbnail Preview */}
+                              <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                                {foundVariant?.imageUrl ? (
+                                  <Image
+                                    src={foundVariant.imageUrl}
+                                    alt={foundProduct?.name || "Product"}
+                                    fill
+                                    className="object-cover"
+                                    sizes="56px"
+                                  />
+                                ) : (
+                                  <SlotIcon size={24} className="text-slate-400" />
+                                )}
+                              </div>
+
+                              {/* Variant selector dropdown */}
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <select
+                                  value={item.variantId}
+                                  onChange={(e) => {
+                                    const newItems = [...(editForm.items || [])];
+                                    newItems[idx].variantId = e.target.value;
+                                    setEditForm((prev) => ({ ...prev, items: newItems }));
+                                  }}
+                                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 focus:outline-none"
+                                >
+                                  <option value="">-- Chọn sản phẩm & biến thể SKU --</option>
+                                  {products.map((p) => (
+                                    <optgroup key={p.id} label={`${p.name} (${formatPrice(p.basePrice)})`}>
+                                      {p.variants.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                          {p.name} • [{v.color} / Size {v.size}] • SKU: {v.sku} (Kho: {v.stockQuantity})
+                                        </option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </select>
+
+                                {/* Chips thông tin chi tiết */}
+                                {foundVariant && foundProduct && (
+                                  <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] pt-0.5">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                        Màu: <strong>{foundVariant.color}</strong>
+                                      </span>
+                                      <span className="font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                        Size: <strong>{foundVariant.size}</strong>
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded-md font-bold ${
+                                        foundVariant.stockQuantity > 5
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          : foundVariant.stockQuantity > 0
+                                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                          : "bg-rose-50 text-rose-700 border border-rose-200"
+                                      }`}>
+                                        Tồn kho: {foundVariant.stockQuantity}
+                                      </span>
+                                    </div>
+                                    <div className="font-black text-slate-900 text-xs ml-auto">
+                                      {formatPrice(unitPrice)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

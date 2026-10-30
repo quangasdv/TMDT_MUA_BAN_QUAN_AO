@@ -30,11 +30,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 const STATUS_FILTER_TABS = [
   { key: "ALL", label: "Tất cả" },
   { key: "PENDING_PAYMENT", label: "Chờ thanh toán" },
-  { key: "PAID", label: "Chờ xử lý" },
-  { key: "PROCESSING", label: "Đang xử lý" },
+  { key: "PAID", label: "Đã thanh toán" },
+  { key: "PROCESSING", label: "Đang đóng gói" },
   { key: "SHIPPING", label: "Đang giao" },
   { key: "DELIVERED", label: "Đã giao" },
   { key: "CANCELLED", label: "Đã hủy" },
+  { key: "PAYMENT_EXPIRED_PENDING_REFUND", label: "Chờ hoàn tiền" },
 ];
 
 export default function AdminOrdersPage() {
@@ -345,7 +346,7 @@ export default function AdminOrdersPage() {
                             <Eye size={13} />
                             Chi tiết
                           </Button>
-                          {order.paymentStatus === "PENDING_REFUND" && (
+                          {(order.paymentStatus === "PENDING_REFUND" || order.paymentStatus === "PAID_EXPIRED" || order.status === "PAYMENT_EXPIRED_PENDING_REFUND") && order.paymentStatus !== "REFUNDED" && (
                             <Button
                               size="sm"
                               onClick={() => confirmRefund(order.id)}

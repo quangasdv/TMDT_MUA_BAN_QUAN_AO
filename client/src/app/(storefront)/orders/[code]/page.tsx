@@ -126,7 +126,11 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     className: "border-zinc-300 text-zinc-600",
   };
 
-  const isPending = order.status === "PENDING_PAYMENT";
+  const isCod = Boolean(
+    (order.payment?.provider === "COD" || (order as any).paymentTransactions?.some((t: any) => t.provider === "COD")) ||
+    (order.status === "PROCESSING" && order.paymentStatus === "UNPAID")
+  );
+  const isPending = order.status === "PENDING_PAYMENT" && !isCod;
   const dateFormatted = new Date(order.createdAt).toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
@@ -197,6 +201,26 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <QrCode size={16} />
             Tiếp tục thanh toán VietQR
           </Link>
+        </div>
+      )}
+
+      {/* Banner thông báo đơn hàng COD */}
+      {isCod && (
+        <div className="mb-8 p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/5 border border-emerald-500/30 flex items-start gap-3.5 shadow-sm">
+          <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0 mt-0.5">
+            <Truck size={22} />
+          </div>
+          <div>
+            <p className="font-bold text-sm text-foreground flex items-center gap-2">
+              <span>Đơn hàng Thanh toán khi nhận hàng (COD)</span>
+              <Badge variant="outline" className="text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 font-bold">
+                Đã xác nhận
+              </Badge>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Đơn hàng của quý khách đã được ghi nhận thành công và đang được chuẩn bị đóng gói. Quý khách vui lòng chuẩn bị số tiền <strong>{formatPrice(order.finalAmount)}</strong> tiền mặt khi shipper giao tới.
+            </p>
+          </div>
         </div>
       )}
 
@@ -383,13 +407,13 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 </div>
               )}
 
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted-foreground items-center">
                 <span>Phí vận chuyển</span>
                 <span className="font-bold text-foreground">
-                  {Number(order.totalAmount) >= 499000 ? (
-                    <span className="text-emerald-600">Miễn phí</span>
+                  {Math.max(0, Number(order.finalAmount) - (Number(order.totalAmount) - Number(order.discountAmount))) === 0 ? (
+                    <span className="text-emerald-600 font-bold">Miễn phí</span>
                   ) : (
-                    formatPrice(30000)
+                    formatPrice(Math.max(0, Number(order.finalAmount) - (Number(order.totalAmount) - Number(order.discountAmount))))
                   )}
                 </span>
               </div>

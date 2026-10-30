@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { VIETNAM_ADDRESSES } from "./data/vietnam-address.data";
 import { CartItem } from "../cart/validation/cart.validation";
+import { useQuery } from "@tanstack/react-query";
+import { getActiveVouchersApi } from "./api/checkout.api";
 import "./style/checkout.css";
 
 export default function CheckoutPage() {
@@ -40,6 +42,15 @@ export default function CheckoutPage() {
   const [selectedDistrictId, setSelectedDistrictId] = React.useState<string>("q1");
   const [selectedWardId, setSelectedWardId] = React.useState<string>("bn");
   const [streetDetail, setStreetDetail] = React.useState<string>("");
+  const [paymentMethod, setPaymentMethod] = React.useState<"VIETQR" | "COD">("VIETQR");
+
+  // Load danh sách Voucher đang kích hoạt từ Database
+  const { data: activeVouchersData } = useQuery({
+    queryKey: ["active-vouchers"],
+    queryFn: getActiveVouchersApi,
+    staleTime: 30 * 1000,
+  });
+  const activeVouchers = activeVouchersData?.data?.vouchers || [];
 
   const {
     form,
@@ -52,6 +63,10 @@ export default function CheckoutPage() {
     shippingFee,
     shippingRate,
     discountAmount,
+    comboDiscountAmount,
+    eligibleComboCount,
+    isComboApplied,
+    activeCombo,
     finalTotal,
     appliedVoucher,
     isApplyingVoucher,
@@ -62,7 +77,7 @@ export default function CheckoutPage() {
     applyVoucher,
     removeVoucher,
     onSubmit,
-  } = useCheckout({ selectedProvinceId });
+  } = useCheckout({ selectedProvinceId, paymentMethod });
 
   const {
     register,
@@ -71,9 +86,6 @@ export default function CheckoutPage() {
   } = form;
 
   const shippingAddressValue = watch("shippingAddress");
-
-  // Phương thức thanh toán (VIETQR hoặc COD)
-  const [paymentMethod, setPaymentMethod] = React.useState<"VIETQR" | "COD">("VIETQR");
 
   const currentProvince = VIETNAM_ADDRESSES.find((p) => p.id === selectedProvinceId);
   const availableDistricts = currentProvince?.districts || [];
@@ -627,25 +639,49 @@ export default function CheckoutPage() {
                     </p>
                   )}
 
-                  {/* Suggestion Chips */}
+                  {/* Dynamic Suggestion Chips từ Database */}
                   <div className="flex items-center gap-2 flex-wrap pt-1">
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <Sparkles size={12} className="text-amber-500" /> Gợi ý:
+                      <Sparkles size={12} className="text-amber-500" /> Gợi ý voucher:
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => applyVoucher("WELCOME2026")}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
-                    >
-                      WELCOME2026 (-20%)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyVoucher("FREESHIP")}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
-                    >
-                      FREESHIP (-30k)
-                    </button>
+                    {activeVouchers.length > 0 ? (
+                      activeVouchers.map((v) => {
+                        const discountLabel =
+                          v.discountType === "PERCENT"
+                            ? `-${v.discountValue}%`
+                            : `-${Number(v.discountValue) >= 1000 ? `${Math.round(Number(v.discountValue) / 1000)}k` : `${v.discountValue}đ`}`;
+                        const minOrder = Number(v.minOrderValue) > 0 ? ` (Đơn từ ${Math.round(Number(v.minOrderValue) / 1000)}k)` : "";
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => applyVoucher(v.code)}
+                            className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold border border-amber-200 cursor-pointer transition-colors flex items-center gap-1 shadow-xs"
+                            title={`Hết hạn: ${new Date(v.expiresAt).toLocaleDateString("vi-VN")}${minOrder}`}
+                          >
+                            <span className="font-bold text-amber-800">{v.code}</span>
+                            <span className="text-[10px] text-amber-600">({discountLabel})</span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => applyVoucher("WELCOME2026")}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
+                        >
+                          WELCOME2026 (-20%)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyVoucher("FREESHIP")}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border cursor-pointer transition-colors"
+                        >
+                          FREESHIP (-30k)
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -725,6 +761,17 @@ export default function CheckoutPage() {
                     <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
+
+                  {/* Ưu đãi Combo Thời Trang */}
+                  {isComboApplied && comboDiscountAmount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-semibold text-xs bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20">
+                      <div className="flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-emerald-600 shrink-0" />
+                        <span>Ưu đãi Combo {activeCombo?.title ? `(${activeCombo.title})` : ""} {eligibleComboCount > 1 ? `x${eligibleComboCount}` : ""}</span>
+                      </div>
+                      <span className="font-bold shrink-0">-{formatPrice(comboDiscountAmount)}</span>
+                    </div>
+                  )}
 
                 <div className="flex justify-between text-muted-foreground">
                   <div>

@@ -26,6 +26,25 @@ export function useCart() {
   const queryClient = useQueryClient();
   const [updatingItemIds, setUpdatingItemIds] = useState<Set<string>>(new Set());
 
+  // Thông tin Combo đang chọn từ localStorage (nếu có)
+  const [activeCombo, setActiveCombo] = useState<{
+    outfitId: string;
+    title: string;
+    discountRate: number;
+    clothingVariantIds: string[];
+    clothingOriginalPrice?: number;
+  } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("trendyfit_active_combo");
+        if (stored) return JSON.parse(stored);
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  });
+
   // Trạng thái lưu trữ các ID sản phẩm được tick chọn (null: mặc định chọn tất cả sản phẩm còn hàng)
   const [userSelectedIds, setUserSelectedIds] = useState<Set<string> | null>(() => {
     if (typeof window !== "undefined") {
@@ -155,7 +174,49 @@ export function useCart() {
     return selectedIsFreeShipping ? 0 : STANDARD_SHIPPING_FEE;
   }, [selectedItems.length, selectedIsFreeShipping]);
 
-  const selectedFinalTotal = selectedSubtotalPrice + selectedShippingFee;
+  // Tính toán ưu đãi Combo (Dynamic Bundle Matching)
+  const { eligibleComboCount, comboDiscountAmount, isComboApplied, hasPartialCombo } = useMemo(() => {
+    if (!activeCombo || !activeCombo.clothingVariantIds || activeCombo.clothingVariantIds.length === 0) {
+      return { eligibleComboCount: 0, comboDiscountAmount: 0, isComboApplied: false, hasPartialCombo: false };
+    }
+
+    const quantities = activeCombo.clothingVariantIds.map((vId) => {
+      const it = selectedItems.find((item) => item.variantId === vId);
+      return it ? (it.quantity || 0) : 0;
+    });
+
+    const minQty = Math.min(...quantities);
+    const someQty = quantities.some((q) => q > 0);
+
+    if (minQty > 0) {
+      let singleSetPrice = 0;
+      for (const vId of activeCombo.clothingVariantIds) {
+        const it = selectedItems.find((item) => item.variantId === vId);
+        if (it) {
+          const base = Number(it.variant?.product?.basePrice) || 0;
+          const adjust = Number(it.variant?.priceAdjustment) || 0;
+          singleSetPrice += base + adjust;
+        }
+      }
+      const rate = Number(activeCombo.discountRate) || 0.15;
+      const discount = Math.round(minQty * singleSetPrice * rate);
+      return {
+        eligibleComboCount: minQty,
+        comboDiscountAmount: discount,
+        isComboApplied: true,
+        hasPartialCombo: false,
+      };
+    }
+
+    return {
+      eligibleComboCount: 0,
+      comboDiscountAmount: 0,
+      isComboApplied: false,
+      hasPartialCombo: someQty,
+    };
+  }, [activeCombo, selectedItems]);
+
+  const selectedFinalTotal = Math.max(0, selectedSubtotalPrice - comboDiscountAmount + selectedShippingFee);
 
   const selectedAmountNeededForFreeShipping = useMemo(() => {
     return Math.max(0, FREE_SHIPPING_THRESHOLD - selectedSubtotalPrice);
@@ -383,6 +444,12 @@ export function useCart() {
     selectedSubtotalPrice,
     selectedShippingFee,
     selectedFinalTotal,
+    // Thông tin Ưu Đãi Combo
+    activeCombo,
+    comboDiscountAmount,
+    eligibleComboCount,
+    isComboApplied,
+    hasPartialCombo,
     selectedIsFreeShipping,
     selectedAmountNeededForFreeShipping,
     selectedFreeShippingProgress,

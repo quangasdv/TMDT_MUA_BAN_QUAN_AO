@@ -385,18 +385,54 @@ export class AdminController {
         });
       }
 
-      // 2. Cập nhật từng biến thể SKU nếu có (màu sắc, size, giá phụ thu, tồn kho, link ảnh biến thể)
-      if (Array.isArray(variants) && variants.length > 0) {
+      // 2. Cập nhật và đồng bộ từng biến thể SKU (Màu sắc, Size, Tồn kho, SKU, Giá phụ thu)
+      if (Array.isArray(variants)) {
+        const incomingIds = variants.map((v: any) => v.id).filter(Boolean);
+
+        // Xóa các biến thể đã bị gỡ bỏ khỏi modal (nếu không có đơn hàng)
+        const existingVariants = await prisma.productVariant.findMany({
+          where: { productId: id },
+          select: { id: true },
+        });
+        const toDeleteIds = existingVariants
+          .map((ev) => ev.id)
+          .filter((evId) => !incomingIds.includes(evId));
+
+        for (const delId of toDeleteIds) {
+          const hasOrders = await prisma.orderItem.count({ where: { variantId: delId } });
+          if (hasOrders === 0) {
+            await prisma.cartItem.deleteMany({ where: { variantId: delId } });
+            await prisma.outfitItem.deleteMany({ where: { variantId: delId } });
+            await prisma.inventoryLock.deleteMany({ where: { variantId: delId } });
+            await prisma.productVariant.delete({ where: { id: delId } });
+          }
+        }
+
+        // Cập nhật hoặc tạo mới biến thể
         for (const v of variants) {
           if (v.id) {
             await prisma.productVariant.update({
               where: { id: v.id },
               data: {
-                ...(v.color && { color: v.color }),
-                ...(v.size && { size: v.size }),
+                ...(v.sku && { sku: String(v.sku).trim() }),
+                ...(v.color && { color: String(v.color).trim() }),
+                ...(v.size && { size: String(v.size).trim() }),
                 ...(v.priceAdjustment !== undefined && { priceAdjustment: Number(v.priceAdjustment) }),
-                ...(v.stockQuantity !== undefined && { stockQuantity: Number(v.stockQuantity) }),
+                ...(v.stockQuantity !== undefined && { stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0) }),
                 ...(v.imageUrl !== undefined && { imageUrl: v.imageUrl }),
+              },
+            });
+          } else if (v.sku && v.color && v.size) {
+            // Thêm mới biến thể
+            await prisma.productVariant.create({
+              data: {
+                productId: id,
+                sku: String(v.sku).trim(),
+                color: String(v.color).trim(),
+                size: String(v.size).trim(),
+                priceAdjustment: Number(v.priceAdjustment || 0),
+                stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0),
+                imageUrl: v.imageUrl || primaryImage || "",
               },
             });
           }

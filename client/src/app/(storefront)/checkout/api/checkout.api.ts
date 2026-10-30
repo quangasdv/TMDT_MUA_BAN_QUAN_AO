@@ -6,6 +6,31 @@ import {
   ApplyVoucherResponse,
 } from "../validation/checkout.validation";
 
+export interface ActiveVoucher {
+  id: string;
+  code: string;
+  discountType: "PERCENT" | "FIXED";
+  discountValue: number | string;
+  minOrderValue: number | string;
+  expiresAt: string;
+}
+
+export interface ActiveVouchersResponse {
+  success: boolean;
+  data: {
+    vouchers: ActiveVoucher[];
+  };
+}
+
+/**
+ * Gọi API GET /api/vouchers/active
+ * Lấy danh sách voucher đang hoạt động từ DB để gợi ý cho khách hàng
+ */
+export async function getActiveVouchersApi(): Promise<ActiveVouchersResponse> {
+  const response = await baseAPI.get<ActiveVouchersResponse>("/vouchers/active");
+  return response.data;
+}
+
 /**
  * Gọi API POST /api/vouchers/apply
  * Áp dụng mã giảm giá để tính toán giá trị chiết khấu hợp lệ
@@ -31,4 +56,3 @@ export async function lockAndCheckoutApi(
   const response = await baseAPI.post<CheckoutLockResponse>("/checkout/lock", payload);
   return response.data;
 }
-

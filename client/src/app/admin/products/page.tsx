@@ -26,6 +26,44 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "react-toastify";
 
+
+// Hàm sinh mã SKU chuẩn thời trang: [MÃ_SP]-[MÀU]-[SIZE] (VD: ATB-DEN-M, BLZ-BE-L)
+function generateSmartSku(name: string, color: string, size: string, index = 1): string {
+  const removeAccents = (str: string) =>
+    str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D");
+
+  const cleanName = removeAccents(name || "SP")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .trim();
+
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  let prefix = "";
+  if (words.length >= 2) {
+    prefix = words.map((w) => w[0]).join("").slice(0, 4);
+  } else if (words.length === 1) {
+    prefix = words[0].slice(0, 4);
+  } else {
+    prefix = "TF";
+  }
+
+  const cleanColor = removeAccents(color || "MAU")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 3);
+
+  const cleanSize = removeAccents(size || "M")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 4);
+
+  return `${prefix}-${cleanColor || "ALL"}-${cleanSize || index}`;
+}
+
 export default function AdminProductsPage() {
   const {
     products,
@@ -143,8 +181,8 @@ export default function AdminProductsPage() {
       name,
       slug,
       variants: prev.variants.map((v, i) =>
-        i === 0 && !v.sku
-          ? { ...v, sku: `${slug.toUpperCase().slice(0, 8)}-M` }
+        i === 0 && (!v.sku || v.sku.startsWith("SKU-") || v.sku.includes("-M"))
+          ? { ...v, sku: generateSmartSku(name, v.color || "Den", v.size || "M", 1) }
           : v
       ),
     }));
@@ -153,12 +191,13 @@ export default function AdminProductsPage() {
   // Add/Remove variants in Create Form
   const handleAddVariant = () => {
     const nextIndex = createForm.variants.length + 1;
+    const newSku = generateSmartSku(createForm.name || "SP", "Trang", "L", nextIndex);
     setCreateForm((prev) => ({
       ...prev,
       variants: [
         ...prev.variants,
         {
-          sku: prev.slug ? `${prev.slug.toUpperCase().slice(0, 8)}-VAR${nextIndex}` : `SKU-${nextIndex}`,
+          sku: newSku,
           color: "Trắng",
           size: "L",
           priceAdjustment: 0,
@@ -230,6 +269,65 @@ export default function AdminProductsPage() {
       categoryId: product.categoryId,
       isActive: product.isActive,
       imageUrl: primaryImg,
+      variants: (product.variants || []).map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        color: v.color,
+        size: v.size,
+        priceAdjustment: Number(v.priceAdjustment || 0),
+        stockQuantity: Number(v.stockQuantity || 0),
+        imageUrl: v.imageUrl || primaryImg,
+      })),
+    });
+  };
+
+    // Quản lý biến thể trong Edit Form
+  const handleAddEditVariant = () => {
+    const currentVariants = updateForm.variants || [];
+    const nextIdx = currentVariants.length + 1;
+    const newSku = generateSmartSku(
+      updateForm.name || editingProduct?.name || "SP",
+      "Trang",
+      "L",
+      nextIdx
+    );
+    setUpdateForm((prev) => ({
+      ...prev,
+      variants: [
+        ...(prev.variants || []),
+        {
+          sku: newSku,
+          color: "Trắng",
+          size: "L",
+          priceAdjustment: 0,
+          stockQuantity: 20,
+          imageUrl: prev.imageUrl || "",
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveEditVariant = (index: number) => {
+    const currentVariants = updateForm.variants || [];
+    if (currentVariants.length <= 1) {
+      toast.warn("Sản phẩm cần có tối thiểu 1 biến thể.");
+      return;
+    }
+    setUpdateForm((prev) => ({
+      ...prev,
+      variants: (prev.variants || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleUpdateEditVariantField = (
+    index: number,
+    field: string,
+    value: string | number
+  ) => {
+    setUpdateForm((prev) => {
+      const updated = [...(prev.variants || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, variants: updated };
     });
   };
 
@@ -238,10 +336,20 @@ export default function AdminProductsPage() {
     e.preventDefault();
     if (!editingProduct) return;
 
+    if (updateForm.variants && updateForm.variants.length === 0) {
+      toast.error("Sản phẩm cần có tối thiểu 1 biến thể.");
+      return;
+    }
+
     updateProduct(editingProduct.id, {
       ...updateForm,
       basePrice: Number(updateForm.basePrice),
       imageUrl: updateForm.imageUrl,
+      variants: (updateForm.variants || []).map((v) => ({
+        ...v,
+        priceAdjustment: Number(v.priceAdjustment || 0),
+        stockQuantity: Math.max(0, parseInt(String(v.stockQuantity), 10) || 0),
+      })),
     });
   };
 
@@ -436,6 +544,7 @@ export default function AdminProductsPage() {
                               <img
                                 src={firstVariantImg}
                                 alt={product.name}
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/outfits/placeholder.png"; }}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -704,9 +813,27 @@ export default function AdminProductsPage() {
                         className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/80 grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs items-end"
                       >
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                            Mã SKU *
-                          </label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-bold text-slate-700">
+                              Mã SKU *
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const autoSku = generateSmartSku(
+                                  createForm.name || "SP",
+                                  v.color || "Den",
+                                  v.size || "M",
+                                  idx + 1
+                                );
+                                handleUpdateVariantField(idx, "sku", autoSku);
+                              }}
+                              className="text-[10px] text-primary hover:underline font-semibold"
+                              title="Tự sinh SKU chuẩn theo Tên - Màu - Size"
+                            >
+                              Gợi ý SKU
+                            </button>
+                          </div>
                           <input
                             type="text"
                             required
@@ -880,7 +1007,7 @@ export default function AdminProductsPage() {
         {/* MODAL 2: CHỈNH SỬA SẢN PHẨM (Frosted Glass Backdrop) */}
         {editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-5 text-slate-900">
+            <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 space-y-5 text-slate-900">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-900 flex items-center justify-center font-bold">
@@ -991,6 +1118,7 @@ export default function AdminProductsPage() {
                         <img
                           src={updateForm.imageUrl}
                           alt="Ảnh sản phẩm"
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/outfits/placeholder.png"; }}
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -1038,6 +1166,146 @@ export default function AdminProductsPage() {
                         className="w-full px-2.5 py-1 text-xs rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* Section Quản lý Biến thể (Màu sắc, Size, Tồn kho, SKU) trong Modal Chỉnh sửa */}
+                <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers size={14} className="text-slate-700" />
+                        Quản lý Biến thể (Size, Màu, Tồn kho, SKU)
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        Cập nhật số lượng tồn kho thực tế, kích cỡ, màu sắc và mã SKU cho từng biến thể.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddEditVariant}
+                      className="h-7 text-xs gap-1 border-slate-300 text-slate-800 hover:bg-slate-100 font-bold"
+                    >
+                      <Plus size={13} />
+                      Thêm biến thể
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    {(updateForm.variants || []).map((v, idx) => (
+                      <div
+                        key={v.id || `edit-var-${idx}`}
+                        className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2 text-xs"
+                      >
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          {/* SKU */}
+                          <div className="col-span-12 sm:col-span-4 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="font-bold text-slate-700 text-[11px]">
+                                Mã SKU *
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const autoSku = generateSmartSku(
+                                    updateForm.name || editingProduct.name,
+                                    (v.color || "Trang"),
+                                    (v.size || "M"),
+                                    idx + 1
+                                  );
+                                  handleUpdateEditVariantField(idx, "sku", autoSku);
+                                }}
+                                className="text-[10px] text-primary hover:underline font-semibold"
+                                title="Tự sinh SKU chuẩn theo Tên - Màu - Size"
+                              >
+                                Gợi ý SKU
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={v.sku || ""}
+                              onChange={(e) =>
+                                handleUpdateEditVariantField(idx, "sku", e.target.value)
+                              }
+                              placeholder="VD: ATB-DEN-M"
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 font-semibold uppercase text-xs"
+                            />
+                          </div>
+
+                          {/* Màu sắc */}
+                          <div className="col-span-6 sm:col-span-3 space-y-1">
+                            <label className="font-bold text-slate-700 text-[11px]">
+                              Màu sắc *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={v.color || ""}
+                              onChange={(e) =>
+                                handleUpdateEditVariantField(idx, "color", e.target.value)
+                              }
+                              placeholder="Đen, Trắng, Be..."
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 font-medium text-xs"
+                            />
+                          </div>
+
+                          {/* Kích cỡ */}
+                          <div className="col-span-6 sm:col-span-2 space-y-1">
+                            <label className="font-bold text-slate-700 text-[11px]">
+                              Size *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={v.size || ""}
+                              onChange={(e) =>
+                                handleUpdateEditVariantField(idx, "size", e.target.value)
+                              }
+                              placeholder="S, M, L..."
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 font-bold uppercase text-xs text-center"
+                            />
+                          </div>
+
+                          {/* Tồn kho */}
+                          <div className="col-span-10 sm:col-span-2 space-y-1">
+                            <label className="font-bold text-slate-700 text-[11px]">
+                              Tồn kho *
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              min={0}
+                              value={v.stockQuantity !== undefined ? v.stockQuantity : ""}
+                              onChange={(e) =>
+                                handleUpdateEditVariantField(
+                                  idx,
+                                  "stockQuantity",
+                                  Math.max(0, parseInt(e.target.value, 10) || 0)
+                                )
+                              }
+                              className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-900 font-bold text-xs text-center"
+                            />
+                          </div>
+
+                          {/* Nút xóa */}
+                          <div className="col-span-2 sm:col-span-1 flex items-end justify-center pt-4">
+                            {(updateForm.variants || []).length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveEditVariant(idx)}
+                                className="p-1.5 text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
+                                title="Xóa biến thể này"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
